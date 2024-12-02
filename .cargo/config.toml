@@ -1,0 +1,8 @@
+#rustc-wrapper = "/usr/bin/sccache"
+
+#[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-c", "link-arg=-fuse-ld=/usr/local/bin/mold"]
+
+[build]
+jobs = 12

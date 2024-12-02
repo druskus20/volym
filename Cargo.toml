@@ -1,0 +1,22 @@
+[package]
+name = "volym"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+winit = { version = "0.29", features = ["rwh_05"] }
+wgpu = { version = "23.0.1", default-features = true }
+serde = { version = "1", features = ["derive"] }
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing = "0.1.41"
+color-eyre = "0.6.3"
+tracing-error = "0.2.1"
+
+
+# Enable a small amount of optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Enable high optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
