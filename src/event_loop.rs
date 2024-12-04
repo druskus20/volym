@@ -12,7 +12,7 @@ pub async fn run() -> Result<()> {
     let event_loop = EventLoop::new().unwrap();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
-    let mut state = crate::renderer::State::new(&window).await;
+    let mut ctx = crate::renderer::Context::new(&window).await?;
     info!("Renderer initialized");
 
     event_loop.run(move |event, control_flow| {
@@ -21,8 +21,8 @@ pub async fn run() -> Result<()> {
             Event::WindowEvent {
                 ref event,
                 window_id,
-            } if window_id == state.window().id() => {
-                if !state.input(event) {
+            } if window_id == ctx.window().id() => {
+                if !ctx.input(event) {
                     // UPDATED!
                     match event {
                         WindowEvent::CloseRequested
@@ -36,18 +36,18 @@ pub async fn run() -> Result<()> {
                             ..
                         } => control_flow.exit(),
                         WindowEvent::Resized(physical_size) => {
-                            state.resize(*physical_size);
+                            ctx.resize(*physical_size);
                         }
                         WindowEvent::RedrawRequested => {
                             // This tells winit that we want another frame after this one
-                            state.window().request_redraw();
+                            ctx.window().request_redraw();
 
-                            state.update();
-                            match state.render() {
+                            ctx.update();
+                            match ctx.render() {
                                 Ok(_) => {}
                                 // Reconfigure the surface if it's lost or outdated
                                 Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
-                                    state.resize(state.size)
+                                    ctx.resize(ctx.size)
                                 }
                                 // The system is out of memory, we should probably quit
                                 Err(wgpu::SurfaceError::OutOfMemory) => {

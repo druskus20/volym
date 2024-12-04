@@ -3,6 +3,7 @@ use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 
 mod event_loop;
+mod pipeline;
 mod renderer;
 
 pub(crate) type Result<T> = color_eyre::eyre::Result<T>;
@@ -17,14 +18,16 @@ fn main() -> Result<()> {
 
 fn setup_tracing() -> Result<()> {
     color_eyre::install()?;
+
     let s = tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
+            EnvFilter::try_from_default_env()
                 .unwrap_or(EnvFilter::new(LevelFilter::INFO.to_string())),
         )
         .compact()
         .finish()
         .with(ErrorLayer::default());
     tracing::subscriber::set_global_default(s)?;
+
     Ok(())
 }

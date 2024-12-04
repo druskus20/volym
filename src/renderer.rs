@@ -1,7 +1,10 @@
 // lib.rs
 use winit::{event::WindowEvent, window::Window};
 
-pub struct State<'a> {
+use crate::pipeline::VolymPipeline;
+use crate::Result;
+
+pub struct Context<'a> {
     surface: wgpu::Surface<'a>,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -11,11 +14,13 @@ pub struct State<'a> {
     // it gets dropped after it as the surface contains
     // unsafe references to the window's resources.
     window: &'a Window,
+
+    pipeline: VolymPipeline,
 }
 
-impl<'a> State<'a> {
+impl<'a> Context<'a> {
     // Creating some of the wgpu types requires async code
-    pub async fn new(window: &'a Window) -> State<'a> {
+    pub async fn new(window: &'a Window) -> Result<Context<'a>> {
         let instance = wgpu::Instance::default();
         let surface = instance.create_surface(window).unwrap();
         let adapter = instance
@@ -54,14 +59,19 @@ impl<'a> State<'a> {
             desired_maximum_frame_latency: 2,
         };
 
-        Self {
+        let path = format!("{}/shaders/raycast.wgsl", env!("CARGO_MANIFEST_DIR"));
+        let shader_path = std::path::Path::new(&path);
+        let pipeline = crate::pipeline::VolymPipeline::new(&device, shader_path, &config)?;
+
+        Ok(Self {
             window,
             surface,
             device,
             queue,
             config,
             size,
-        }
+            pipeline,
+        })
     }
 
     pub fn window(&self) -> &Window {
@@ -83,7 +93,7 @@ impl<'a> State<'a> {
 
     pub fn update(&mut self) {}
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self) -> std::result::Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view = output
             .texture
@@ -94,27 +104,15 @@ impl<'a> State<'a> {
                 label: Some("Render Encoder"),
             });
 
-        // render pass
+        // compute pass
         {
-            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                occlusion_query_set: None,
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Pass"),
                 timestamp_writes: None,
             });
+
+            compute_pass.set_pipeline(self.pipeline.as_ref());
+            //compute_pass.draw(0..3, 0..1);
         }
 
         // submit will accept anything that implements IntoIter
