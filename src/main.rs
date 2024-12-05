@@ -2,8 +2,8 @@ use tracing::{info, level_filters::LevelFilter};
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 
+mod compute;
 mod event_loop;
-mod pipeline;
 mod renderer;
 
 pub(crate) type Result<T> = color_eyre::eyre::Result<T>;

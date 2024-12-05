@@ -1,8 +1,11 @@
+use std::path::Path;
+
 // lib.rs
 use winit::{event::WindowEvent, window::Window};
 
-use crate::pipeline::VolymPipeline;
-use crate::Result;
+pub mod pipeline;
+
+use crate::{compute::ComputePipeline, Result};
 
 pub struct Context<'a> {
     surface: wgpu::Surface<'a>,
@@ -15,7 +18,8 @@ pub struct Context<'a> {
     // unsafe references to the window's resources.
     window: &'a Window,
 
-    pipeline: VolymPipeline,
+    compute_pipeline: ComputePipeline,
+    render_pipeline: pipeline::RenderPipeline,
 }
 
 impl<'a> Context<'a> {
@@ -33,7 +37,15 @@ impl<'a> Context<'a> {
             .unwrap();
 
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor::default(), None)
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    //required_features: wgpu::Features::default()
+                    //    | wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
+                    //// | wgpu::Features::POLYGON_MODE_LINE
+                    ..Default::default()
+                },
+                None,
+            )
             .await
             .unwrap();
 
@@ -59,9 +71,18 @@ impl<'a> Context<'a> {
             desired_maximum_frame_latency: 2,
         };
 
-        let path = format!("{}/shaders/raycast.wgsl", env!("CARGO_MANIFEST_DIR"));
-        let shader_path = std::path::Path::new(&path);
-        let pipeline = crate::pipeline::VolymPipeline::new(&device, shader_path, &config)?;
+        let compute_path = format!(
+            "{}/shaders/raycast_compute.wgsl",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let render_path = format!("{}/shaders/raycast_render.wgsl", env!("CARGO_MANIFEST_DIR"));
+        let compute_pipeline =
+            crate::compute::ComputePipeline::new(&device, Path::new(&compute_path), &config)?;
+        let render_pipeline = crate::renderer::pipeline::RenderPipeline::new(
+            &device,
+            Path::new(&render_path),
+            &config,
+        )?;
 
         Ok(Self {
             window,
@@ -70,7 +91,8 @@ impl<'a> Context<'a> {
             queue,
             config,
             size,
-            pipeline,
+            compute_pipeline,
+            render_pipeline,
         })
     }
 
@@ -104,6 +126,35 @@ impl<'a> Context<'a> {
                 label: Some("Render Encoder"),
             });
 
+        // render pass
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Render Pass"),
+                color_attachments: &[
+                    // This is what @location(0) in the fragment shader targets
+                    Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0,
+                            }),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    }),
+                ],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+
+            render_pass.set_pipeline(self.render_pipeline.as_ref());
+            render_pass.draw(0..3, 0..1);
+        }
+
         // compute pass
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
@@ -111,8 +162,7 @@ impl<'a> Context<'a> {
                 timestamp_writes: None,
             });
 
-            compute_pass.set_pipeline(self.pipeline.as_ref());
-            //compute_pass.draw(0..3, 0..1);
+            compute_pass.set_pipeline(self.compute_pipeline.as_ref());
         }
 
         // submit will accept anything that implements IntoIter
