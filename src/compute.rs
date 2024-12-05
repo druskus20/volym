@@ -3,7 +3,8 @@ use std::path::Path;
 use crate::Result;
 
 pub struct ComputePipeline {
-    pipeline: wgpu::ComputePipeline,
+    pub pipeline: wgpu::ComputePipeline,
+    pub bind_group_layout: wgpu::BindGroupLayout,
 }
 
 pub const DESC_COMPUTE: wgpu::BindGroupLayoutDescriptor<'static> =
@@ -50,7 +51,10 @@ impl ComputePipeline {
             cache: Default::default(),
         });
 
-        Ok(ComputePipeline { pipeline })
+        Ok(ComputePipeline {
+            pipeline,
+            bind_group_layout: storage_texture_layout,
+        })
     }
 }
 

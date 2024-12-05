@@ -2,7 +2,8 @@ use crate::Result;
 use std::path::Path;
 
 pub struct RenderPipeline {
-    pipeline: wgpu::RenderPipeline,
+    pub pipeline: wgpu::RenderPipeline,
+    pub bind_group_layout: wgpu::BindGroupLayout,
 }
 
 pub const DESC_RENDER: wgpu::BindGroupLayoutDescriptor<'static> = wgpu::BindGroupLayoutDescriptor {
@@ -32,39 +33,12 @@ impl RenderPipeline {
         shader_path: &Path,
         config: &wgpu::SurfaceConfiguration,
     ) -> Result<Self> {
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Compute Output Texture"),
-            size: wgpu::Extent3d {
-                width: config.width,
-                height: config.height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[], // TODO
-        });
-        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-
         let shader_contents = std::fs::read_to_string(shader_path)?;
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(shader_path.to_str().unwrap()),
             source: wgpu::ShaderSource::Wgsl(shader_contents.into()),
         });
         let storage_texture_layout = device.create_bind_group_layout(&DESC_RENDER);
-
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("Sampler"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Linear,
-            ..Default::default()
-        });
 
         // Create render pipeline
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -102,7 +76,10 @@ impl RenderPipeline {
             cache: None,
         });
 
-        Ok(Self { pipeline })
+        Ok(Self {
+            pipeline,
+            bind_group_layout: storage_texture_layout,
+        })
     }
 }
 

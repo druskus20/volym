@@ -19,7 +19,10 @@ pub struct Context<'a> {
     window: &'a Window,
 
     compute_pipeline: ComputePipeline,
+    compute_bind_group: wgpu::BindGroup,
+
     render_pipeline: pipeline::RenderPipeline,
+    render_bind_group: wgpu::BindGroup,
 }
 
 impl<'a> Context<'a> {
@@ -84,6 +87,55 @@ impl<'a> Context<'a> {
             &config,
         )?;
 
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Compute Output Texture"),
+            size: wgpu::Extent3d {
+                width: config.width,
+                height: config.height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[], // TODO
+        });
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
+        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Render Bind Group"),
+            layout: &render_pipeline.bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+            ],
+        });
+
+        let compute_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Compute Bind Group"),
+            layout: &compute_pipeline.bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(&texture_view),
+            }],
+        });
+
         Ok(Self {
             window,
             surface,
@@ -92,7 +144,9 @@ impl<'a> Context<'a> {
             config,
             size,
             compute_pipeline,
+            compute_bind_group,
             render_pipeline,
+            render_bind_group,
         })
     }
 
@@ -152,7 +206,7 @@ impl<'a> Context<'a> {
             });
 
             render_pass.set_pipeline(self.render_pipeline.as_ref());
-            //render_pass.set_bind_group(0, &render_bind_group, &[]);
+            render_pass.set_bind_group(0, &self.render_bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
 
@@ -164,6 +218,7 @@ impl<'a> Context<'a> {
             });
 
             compute_pass.set_pipeline(self.compute_pipeline.as_ref());
+            compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
         }
 
         // submit will accept anything that implements IntoIter
