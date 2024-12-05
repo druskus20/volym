@@ -2,9 +2,10 @@ use tracing::{info, level_filters::LevelFilter};
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 
-mod compute;
+mod compute_pipeline;
+mod context;
 mod event_loop;
-mod renderer;
+mod render_pipeline;
 
 pub(crate) type Result<T> = color_eyre::eyre::Result<T>;
 

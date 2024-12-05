@@ -1,11 +1,11 @@
+/// Rendering context
 use std::path::Path;
 
 // lib.rs
+use crate::render_pipeline;
 use winit::{event::WindowEvent, window::Window};
 
-pub mod pipeline;
-
-use crate::{compute::ComputePipeline, Result};
+use crate::{compute_pipeline::ComputePipeline, Result};
 
 pub struct Context<'a> {
     surface: wgpu::Surface<'a>,
@@ -13,15 +13,13 @@ pub struct Context<'a> {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
-    // The window must be declared after the surface so
-    // it gets dropped after it as the surface contains
-    // unsafe references to the window's resources.
+
     window: &'a Window,
 
     compute_pipeline: ComputePipeline,
     compute_bind_group: wgpu::BindGroup,
 
-    render_pipeline: pipeline::RenderPipeline,
+    render_pipeline: render_pipeline::RenderPipeline,
     render_bind_group: wgpu::BindGroup,
 }
 
@@ -53,9 +51,6 @@ impl<'a> Context<'a> {
             .unwrap();
 
         let surface_caps = surface.get_capabilities(&adapter);
-        // Shader code in this tutorial assumes an sRGB surface texture. Using a different
-        // one will result in all the colors coming out darker. If you want to support non
-        // sRGB surfaces, you'll need to account for that when drawing to the frame.
         let surface_format = surface_caps
             .formats
             .iter()
@@ -79,9 +74,12 @@ impl<'a> Context<'a> {
             env!("CARGO_MANIFEST_DIR")
         );
         let render_path = format!("{}/shaders/raycast_render.wgsl", env!("CARGO_MANIFEST_DIR"));
-        let compute_pipeline =
-            crate::compute::ComputePipeline::new(&device, Path::new(&compute_path), &config)?;
-        let render_pipeline = crate::renderer::pipeline::RenderPipeline::new(
+        let compute_pipeline = crate::compute_pipeline::ComputePipeline::new(
+            &device,
+            Path::new(&compute_path),
+            &config,
+        )?;
+        let render_pipeline = crate::context::render_pipeline::RenderPipeline::new(
             &device,
             Path::new(&render_path),
             &config,
@@ -151,7 +149,7 @@ impl<'a> Context<'a> {
     }
 
     pub fn window(&self) -> &Window {
-        &self.window
+        self.window
     }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -170,6 +168,7 @@ impl<'a> Context<'a> {
     pub fn update(&mut self) {}
 
     pub fn render(&mut self) -> std::result::Result<(), wgpu::SurfaceError> {
+        let size = self.window.inner_size();
         let output = self.surface.get_current_texture()?;
         let view = output
             .texture
@@ -179,6 +178,20 @@ impl<'a> Context<'a> {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Render Encoder"),
             });
+        // compute pass
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Pass"),
+                timestamp_writes: None,
+            });
+
+            compute_pass.set_pipeline(self.compute_pipeline.as_ref());
+            compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
+
+            // size.width + 15 ensures that any leftover pixels (less than a full workgroup 16x16)
+            // still require an additional workgroup.
+            compute_pass.dispatch_workgroups((size.width + 15) / 16, (size.height + 15) / 16, 1);
+        }
 
         // render pass
         {
@@ -207,21 +220,9 @@ impl<'a> Context<'a> {
 
             render_pass.set_pipeline(self.render_pipeline.as_ref());
             render_pass.set_bind_group(0, &self.render_bind_group, &[]);
-            render_pass.draw(0..3, 0..1);
+            render_pass.draw(0..6, 0..1); // Draw a quad (2*3 vertices)
         }
 
-        // compute pass
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Compute Pass"),
-                timestamp_writes: None,
-            });
-
-            compute_pass.set_pipeline(self.compute_pipeline.as_ref());
-            compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
-        }
-
-        // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
 
