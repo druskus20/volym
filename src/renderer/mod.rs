@@ -152,6 +152,7 @@ impl<'a> Context<'a> {
             });
 
             render_pass.set_pipeline(self.render_pipeline.as_ref());
+            //render_pass.set_bind_group(0, &render_bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
 
