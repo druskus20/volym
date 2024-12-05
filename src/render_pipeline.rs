@@ -1,3 +1,4 @@
+/// Render pipeline that displays the texture on the screen
 use crate::Result;
 use std::path::Path;
 

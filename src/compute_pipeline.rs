@@ -1,3 +1,4 @@
+/// Compute pipeline that does the heavy lifting and outputs to a texture
 use std::path::Path;
 
 use crate::Result;
