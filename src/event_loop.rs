@@ -1,21 +1,18 @@
 /// Event loop that handles window events and triggers rendering
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 use winit::{
     event::*,
     event_loop::EventLoop,
     keyboard::{KeyCode, PhysicalKey},
-    window::WindowBuilder,
 };
 
-use crate::Result;
+use crate::{context::Context, RenderingAlgorithm, Result};
 
-pub async fn run() -> Result<()> {
-    let event_loop = EventLoop::new().unwrap();
-    let window = WindowBuilder::new().build(&event_loop).unwrap();
-
-    let mut ctx = crate::context::Context::new(&window).await?;
-    info!("Renderer initialized");
-
+pub fn run<T: std::fmt::Debug>(
+    event_loop: EventLoop<T>,
+    ctx: &mut Context,
+    rendering_algorithm: impl RenderingAlgorithm,
+) -> Result<()> {
     event_loop.run(move |event, control_flow| {
         debug!(target = "render loop", "received event {:?}", event);
         match event {
@@ -39,10 +36,14 @@ pub async fn run() -> Result<()> {
                             ctx.resize(*physical_size);
                         }
                         WindowEvent::RedrawRequested => {
+                            debug!("Redraw requested");
                             // This tells winit that we want another frame after this one
-                            ctx.window().request_redraw();
+                            ctx.window().request_redraw(); // <-- TODO: This should probably be done
+                                                           // somehow else - maybe everytime the
+                                                           // model is updated?
 
                             ctx.update();
+                            rendering_algorithm.compute(ctx).unwrap();
                             match ctx.render() {
                                 Ok(_) => {}
                                 Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
