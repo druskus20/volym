@@ -5,19 +5,18 @@ use std::path::Path;
 use crate::render_pipeline;
 use winit::{event::WindowEvent, window::Window};
 
-use crate::{compute_pipeline::ComputePipeline, Result};
+use crate::Result;
 
 pub struct Context<'a> {
-    surface: wgpu::Surface<'a>,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-    config: wgpu::SurfaceConfiguration,
+    pub surface: wgpu::Surface<'a>,
+    pub device: wgpu::Device,
+    pub queue: wgpu::Queue,
+    pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
+    _texture: wgpu::Texture,
+    pub texture_view: wgpu::TextureView,
 
     window: &'a Window,
-
-    compute_pipeline: ComputePipeline,
-    compute_bind_group: wgpu::BindGroup,
 
     render_pipeline: render_pipeline::RenderPipeline,
     render_bind_group: wgpu::BindGroup,
@@ -69,22 +68,14 @@ impl<'a> Context<'a> {
             desired_maximum_frame_latency: 2,
         };
 
-        let compute_path = format!(
-            "{}/shaders/raycast_compute.wgsl",
-            env!("CARGO_MANIFEST_DIR")
-        );
         let render_path = format!("{}/shaders/raycast_render.wgsl", env!("CARGO_MANIFEST_DIR"));
-        let compute_pipeline = crate::compute_pipeline::ComputePipeline::new(
-            &device,
-            Path::new(&compute_path),
-            &config,
-        )?;
         let render_pipeline = crate::context::render_pipeline::RenderPipeline::new(
             &device,
             Path::new(&render_path),
             &config,
         )?;
 
+        // TODO: maybe handle resizing?
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Compute Output Texture"),
             size: wgpu::Extent3d {
@@ -125,15 +116,6 @@ impl<'a> Context<'a> {
             ],
         });
 
-        let compute_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Compute Bind Group"),
-            layout: &compute_pipeline.bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(&texture_view),
-            }],
-        });
-
         Ok(Self {
             window,
             surface,
@@ -141,8 +123,8 @@ impl<'a> Context<'a> {
             queue,
             config,
             size,
-            compute_pipeline,
-            compute_bind_group,
+            _texture: texture,
+            texture_view,
             render_pipeline,
             render_bind_group,
         })
@@ -168,7 +150,6 @@ impl<'a> Context<'a> {
     pub fn update(&mut self) {}
 
     pub fn render(&mut self) -> std::result::Result<(), wgpu::SurfaceError> {
-        let size = self.window.inner_size();
         let output = self.surface.get_current_texture()?;
         let view = output
             .texture
@@ -178,20 +159,6 @@ impl<'a> Context<'a> {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Render Encoder"),
             });
-        // compute pass
-        {
-            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-                label: Some("Compute Pass"),
-                timestamp_writes: None,
-            });
-
-            compute_pass.set_pipeline(self.compute_pipeline.as_ref());
-            compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
-
-            // size.width + 15 ensures that any leftover pixels (less than a full workgroup 16x16)
-            // still require an additional workgroup.
-            compute_pass.dispatch_workgroups((size.width + 15) / 16, (size.height + 15) / 16, 1);
-        }
 
         // render pass
         {
@@ -223,7 +190,7 @@ impl<'a> Context<'a> {
             render_pass.draw(0..6, 0..1); // Draw a quad (2*3 vertices)
         }
 
-        self.queue.submit(std::iter::once(encoder.finish()));
+        self.queue.submit(Some(encoder.finish()));
         output.present();
 
         Ok(())
