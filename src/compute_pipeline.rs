@@ -1,6 +1,8 @@
 /// Compute pipeline that does the heavy lifting and outputs to a texture
 use std::path::Path;
 
+use tracing::info;
+
 use crate::Result;
 
 pub struct ComputePipeline {
@@ -24,22 +26,20 @@ pub const DESC_COMPUTE: wgpu::BindGroupLayoutDescriptor<'static> =
     };
 
 impl ComputePipeline {
-    pub fn new(
-        device: &wgpu::Device,
-        shader_path: &Path,
-        _config: &wgpu::SurfaceConfiguration,
-    ) -> Result<Self> {
+    pub fn new(device: &wgpu::Device, shader_path: &Path) -> Result<Self> {
         let shader_contents = std::fs::read_to_string(shader_path)?;
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(shader_path.to_str().unwrap()),
             source: wgpu::ShaderSource::Wgsl(shader_contents.into()),
         });
 
+        info!("Creating compute pipeline");
+        let input_texture_layout = device.create_bind_group_layout(&crate::volume::Volume::DESC);
         let storage_texture_layout = device.create_bind_group_layout(&DESC_COMPUTE);
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Compute Pipeline Layout"),
-                bind_group_layouts: &[&storage_texture_layout],
+                bind_group_layouts: &[&input_texture_layout, &storage_texture_layout],
                 push_constant_ranges: &[],
             });
 
