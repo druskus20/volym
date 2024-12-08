@@ -191,6 +191,8 @@ impl<'a> Context<'a> {
         }
 
         self.queue.submit(Some(encoder.finish()));
+        // https://docs.rs/winit/latest/winit/window/struct.Window.html#platform-specific-2
+        self.window.pre_present_notify();
         output.present();
 
         Ok(())

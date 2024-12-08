@@ -23,6 +23,7 @@ fn main() -> Result<()> {
 fn run<Algo: RenderingAlgorithm>() -> Result<()> {
     let event_loop = EventLoop::new()?;
     let window = WindowBuilder::new()
+        .with_inner_size(winit::dpi::PhysicalSize::new(1024, 768))
         .with_title("Volym")
         .build(&event_loop)?;
     let mut ctx = pollster::block_on(context::Context::new(&window))?;

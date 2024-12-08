@@ -1,3 +1,4 @@
+use std::time::{Duration, Instant};
 /// Event loop that handles window events and triggers rendering
 use tracing::{debug, error, warn};
 use winit::{
@@ -13,6 +14,9 @@ pub fn run<T: std::fmt::Debug>(
     ctx: &mut Context,
     rendering_algorithm: impl RenderingAlgorithm,
 ) -> Result<()> {
+    let mut last_update = Instant::now();
+    let mut frame_count = 0;
+
     event_loop.run(move |event, control_flow| {
         debug!(target = "render loop", "received event {:?}", event);
         match event {
@@ -37,15 +41,20 @@ pub fn run<T: std::fmt::Debug>(
                         }
                         WindowEvent::RedrawRequested => {
                             debug!("Redraw requested");
-                            // This tells winit that we want another frame after this one
-                            ctx.window().request_redraw(); // <-- TODO: This should probably be done
-                                                           // somehow else - maybe everytime the
-                                                           // model is updated?
+                            ctx.window().request_redraw();
 
                             ctx.update();
                             rendering_algorithm.compute(ctx).unwrap();
                             match ctx.render() {
-                                Ok(_) => {}
+                                Ok(_) => {
+                                    frame_count += 1;
+                                    let now = Instant::now();
+                                    if now.duration_since(last_update) >= Duration::from_secs(1) {
+                                        warn!(target = "performance", "FPS: {}", frame_count);
+                                        frame_count = 0;
+                                        last_update = now;
+                                    }
+                                }
                                 Err(wgpu::SurfaceError::Lost | wgpu::SurfaceError::Outdated) => {
                                     ctx.resize(ctx.size)
                                 }
@@ -67,3 +76,5 @@ pub fn run<T: std::fmt::Debug>(
     })?;
     Ok(())
 }
+
+
