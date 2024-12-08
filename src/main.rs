@@ -26,7 +26,12 @@ fn run<Algo: RenderingAlgorithm>() -> Result<()> {
         .with_title("Volym")
         .build(&event_loop)?;
     let mut ctx = pollster::block_on(context::Context::new(&window))?;
-    let rendering_algorithm = Algo::init(&mut ctx)?;
+    let volume_path = format!(
+        "{}/assets/bonsai_256x256x256_uint8.raw",
+        env!("CARGO_MANIFEST_DIR")
+    );
+    let volume = volume::Volume::new(Path::new(&volume_path), &ctx.device, &ctx.queue)?;
+    let rendering_algorithm = Algo::init(&mut ctx, volume)?;
     event_loop::run(event_loop, &mut ctx, rendering_algorithm)?;
     Ok(())
 }
@@ -48,30 +53,27 @@ fn setup_tracing() -> Result<()> {
 }
 
 struct SimpleRaycaster {
-    //volume: volume::Volume,                      // contains the bindgroup
+    volume: volume::Volume,                      // contains the bindgroup
     pipeline: compute_pipeline::ComputePipeline, // contains the bindgrouplayout
     compute_bind_group: wgpu::BindGroup,
 }
 
 pub trait RenderingAlgorithm: Sized {
-    fn init(ctx: &mut context::Context) -> Result<Self>;
+    fn init(ctx: &mut context::Context, volume: volume::Volume) -> Result<Self>;
     fn validate(&self) -> Result<()>;
     fn compute(&self, ctx: &mut context::Context) -> Result<()>;
 }
 
 impl RenderingAlgorithm for SimpleRaycaster {
-    fn init(ctx: &mut context::Context) -> Result<Self> {
+    fn init(ctx: &mut context::Context, volume: volume::Volume) -> Result<Self> {
         // todo: load volume
 
         let compute_path = format!(
             "{}/shaders/raycast_compute.wgsl",
             env!("CARGO_MANIFEST_DIR")
         );
-        let pipeline = crate::compute_pipeline::ComputePipeline::new(
-            &ctx.device,
-            Path::new(&compute_path),
-            &ctx.config,
-        )?;
+        let pipeline =
+            crate::compute_pipeline::ComputePipeline::new(&ctx.device, Path::new(&compute_path))?;
         let compute_bind_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Compute Bind Group"),
             layout: &pipeline.bind_group_layout,
@@ -82,6 +84,7 @@ impl RenderingAlgorithm for SimpleRaycaster {
         });
 
         Ok(SimpleRaycaster {
+            volume,
             pipeline,
             compute_bind_group,
         })
@@ -98,6 +101,8 @@ impl RenderingAlgorithm for SimpleRaycaster {
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
                 label: Some("Compute Encoder"),
             });
+
+        // Compute pass
         {
             let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("Compute Pass"),
@@ -105,7 +110,9 @@ impl RenderingAlgorithm for SimpleRaycaster {
             });
 
             compute_pass.set_pipeline(self.pipeline.as_ref());
-            compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
+
+            compute_pass.set_bind_group(0, &self.volume.bind_group, &[]);
+            compute_pass.set_bind_group(1, &self.compute_bind_group, &[]);
 
             // size.width + 15 ensures that any leftover pixels (less than a full workgroup 16x16)
             // still require an additional workgroup.
