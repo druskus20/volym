@@ -1,7 +1,7 @@
 use tracing::info;
 
 use crate::Result;
-use std::{num::NonZeroU32, path::Path};
+use std::path::Path;
 
 pub struct Volume {
     pub texture: wgpu::Texture,
@@ -33,9 +33,21 @@ impl Volume {
     };
 
     #[tracing::instrument]
-    pub fn new(path: &Path, device: &wgpu::Device, queue: &wgpu::Queue) -> Result<Self> {
+    pub fn new(
+        path: &Path,
+        flip_mode: FlipMode,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) -> Result<Self> {
         info!("Loading volume from {:?}", path);
-        let data = std::fs::read(path)?;
+        let data = {
+            let mut data = std::fs::read(path)?;
+            if flip_mode == FlipMode::Y {
+                flip_y(&mut data, 256, 256, 256);
+            }
+            data
+        };
+
         let size = wgpu::Extent3d {
             width: 256,
             height: 256,
@@ -93,4 +105,24 @@ impl Volume {
             sampler,
         })
     }
+}
+
+fn flip_y(data: &mut [u8], width: usize, height: usize, depth: usize) {
+    for z in 0..depth {
+        for y in 0..(height / 2) {
+            let top_row = y * width;
+            let bottom_row = (height - y - 1) * width;
+            for x in 0..width {
+                let top_index = z * width * height + top_row + x;
+                let bottom_index = z * width * height + bottom_row + x;
+                data.swap(top_index, bottom_index);
+            }
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum FlipMode {
+    None,
+    Y,
 }

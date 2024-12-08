@@ -23,7 +23,6 @@ fn main() -> Result<()> {
 fn run<Algo: RenderingAlgorithm>() -> Result<()> {
     let event_loop = EventLoop::new()?;
     let window = WindowBuilder::new()
-        .with_inner_size(winit::dpi::PhysicalSize::new(1024, 768))
         .with_title("Volym")
         .build(&event_loop)?;
     let mut ctx = pollster::block_on(context::Context::new(&window))?;
@@ -31,7 +30,12 @@ fn run<Algo: RenderingAlgorithm>() -> Result<()> {
         "{}/assets/bonsai_256x256x256_uint8.raw",
         env!("CARGO_MANIFEST_DIR")
     );
-    let volume = volume::Volume::new(Path::new(&volume_path), &ctx.device, &ctx.queue)?;
+    let volume = volume::Volume::new(
+        Path::new(&volume_path),
+        volume::FlipMode::Y,
+        &ctx.device,
+        &ctx.queue,
+    )?;
     let rendering_algorithm = Algo::init(&mut ctx, volume)?;
     event_loop::run(event_loop, &mut ctx, rendering_algorithm)?;
     Ok(())

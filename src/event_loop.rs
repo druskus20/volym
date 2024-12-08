@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 /// Event loop that handles window events and triggers rendering
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 use winit::{
     event::*,
     event_loop::EventLoop,
@@ -9,6 +9,7 @@ use winit::{
 
 use crate::{context::Context, RenderingAlgorithm, Result};
 
+#[tracing::instrument(skip(event_loop, ctx, rendering_algorithm))]
 pub fn run<T: std::fmt::Debug>(
     event_loop: EventLoop<T>,
     ctx: &mut Context,
@@ -18,7 +19,7 @@ pub fn run<T: std::fmt::Debug>(
     let mut frame_count = 0;
 
     event_loop.run(move |event, control_flow| {
-        debug!(target = "render loop", "received event {:?}", event);
+        debug!(target = "Render loop", "received event {:?}", event);
         match event {
             Event::WindowEvent {
                 ref event,
@@ -50,7 +51,7 @@ pub fn run<T: std::fmt::Debug>(
                                     frame_count += 1;
                                     let now = Instant::now();
                                     if now.duration_since(last_update) >= Duration::from_secs(1) {
-                                        warn!(target = "performance", "FPS: {}", frame_count);
+                                        info!("FPS: {}", frame_count);
                                         frame_count = 0;
                                         last_update = now;
                                     }
@@ -76,5 +77,3 @@ pub fn run<T: std::fmt::Debug>(
     })?;
     Ok(())
 }
-
-
