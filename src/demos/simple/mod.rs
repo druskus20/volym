@@ -15,7 +15,7 @@ pub struct Simple {
 }
 
 impl RenderingDemo for Simple {
-    fn init(ctx: &mut context::Context, volume: volume::Volume) -> Result<Self> {
+    fn init(ctx: &mut context::Context) -> Result<Self> {
         let compute_path = format!("{}/shaders/simple_compute.wgsl", env!("CARGO_MANIFEST_DIR"));
         let input_texture_layout = ctx
             .device
@@ -33,6 +33,17 @@ impl RenderingDemo for Simple {
                 resource: wgpu::BindingResource::TextureView(&ctx.texture_view),
             }],
         });
+        let volume = volume::Volume::new(
+            Path::new(
+                &(format!(
+                    "{}/assets/bonsai_256x256x256_uint8.raw",
+                    env!("CARGO_MANIFEST_DIR")
+                )),
+            ),
+            volume::FlipMode::Y,
+            &ctx.device,
+            &ctx.queue,
+        )?;
 
         Ok(Simple {
             volume,
