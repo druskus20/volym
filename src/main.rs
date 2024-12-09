@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use demos::RenderingDemo;
 use tracing::level_filters::LevelFilter;
 use tracing_error::ErrorLayer;
@@ -34,21 +32,8 @@ fn run<Demo: RenderingDemo>() -> Result<()> {
     // Create a rendering context
     let mut ctx = pollster::block_on(context::Context::new(&window))?;
 
-    // Load a volume
-    let volume = volume::Volume::new(
-        Path::new(
-            &(format!(
-                "{}/assets/bonsai_256x256x256_uint8.raw",
-                env!("CARGO_MANIFEST_DIR")
-            )),
-        ),
-        volume::FlipMode::Y,
-        &ctx.device,
-        &ctx.queue,
-    )?;
-
     // Init and run the rendering demo
-    let rendering_algorithm = Demo::init(&mut ctx, volume)?;
+    let rendering_algorithm = Demo::init(&mut ctx)?;
     event_loop::run(event_loop, &mut ctx, rendering_algorithm)?;
 
     Ok(())
