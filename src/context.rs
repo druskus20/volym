@@ -170,12 +170,7 @@ impl<'a> Context<'a> {
                         view: &view,
                         resolve_target: None,
                         ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(wgpu::Color {
-                                r: 0.1,
-                                g: 0.2,
-                                b: 0.3,
-                                a: 1.0,
-                            }),
+                            load: wgpu::LoadOp::Clear(wgpu::Color::default()),
                             store: wgpu::StoreOp::Store,
                         },
                     }),
@@ -191,8 +186,12 @@ impl<'a> Context<'a> {
         }
 
         self.queue.submit(Some(encoder.finish()));
+
+        // Before presenting to the screen we need to let the compositor know - This effectively
+        // syncs us to the monitor refresh rate.
         // https://docs.rs/winit/latest/winit/window/struct.Window.html#platform-specific-2
         self.window.pre_present_notify();
+
         output.present();
 
         Ok(())
