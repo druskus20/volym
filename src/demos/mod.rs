@@ -5,7 +5,7 @@ use crate::Result;
 
 pub mod simple;
 
-pub trait RenderingAlgorithm: Sized {
+pub trait RenderingDemo: Sized {
     fn init(ctx: &mut context::Context, volume: volume::Volume) -> Result<Self>;
     fn compute(&self, ctx: &mut context::Context) -> Result<()>;
 }

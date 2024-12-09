@@ -7,13 +7,13 @@ use winit::{
     keyboard::{KeyCode, PhysicalKey},
 };
 
-use crate::{context::Context, RenderingAlgorithm, Result};
+use crate::{context::Context, RenderingDemo, Result};
 
 #[tracing::instrument(skip(event_loop, ctx, rendering_algorithm))]
 pub fn run<T: std::fmt::Debug>(
     event_loop: EventLoop<T>,
     ctx: &mut Context,
-    rendering_algorithm: impl RenderingAlgorithm,
+    rendering_algorithm: impl RenderingDemo,
 ) -> Result<()> {
     let mut last_update = Instant::now();
     let mut frame_count = 0;

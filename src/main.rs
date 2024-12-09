@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use demos::RenderingAlgorithm;
+use demos::RenderingDemo;
 use tracing::{info, level_filters::LevelFilter};
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
@@ -14,18 +14,18 @@ mod render_pipeline;
 // Demo
 use demos::simple::compute_pipeline;
 use demos::simple::volume;
-use demos::simple::SimpleRaycaster;
+use demos::simple::Simple;
 
 pub(crate) type Result<T> = color_eyre::eyre::Result<T>;
 
 fn main() -> Result<()> {
     setup_tracing()?;
-    run::<SimpleRaycaster>()?;
+    run::<Simple>()?;
     info!("Done");
     Ok(())
 }
 
-fn run<Algo: RenderingAlgorithm>() -> Result<()> {
+fn run<Algo: RenderingDemo>() -> Result<()> {
     let event_loop = EventLoop::new()?;
     let window = WindowBuilder::new()
         .with_title("Volym")

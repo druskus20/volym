@@ -4,9 +4,9 @@ use crate::Result;
 use std::path::Path;
 
 pub struct Volume {
-    texture: wgpu::Texture,
+    _texture: wgpu::Texture,
     bind_group: wgpu::BindGroup,
-    sampler: wgpu::Sampler,
+    _sampler: wgpu::Sampler,
 }
 
 impl Volume {
@@ -100,9 +100,9 @@ impl Volume {
         });
 
         Ok(Volume {
-            texture,
+            _texture: texture,
             bind_group,
-            sampler,
+            _sampler: sampler,
         })
     }
 
@@ -127,6 +127,6 @@ fn flip_y(data: &mut [u8], width: usize, height: usize, depth: usize) {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum FlipMode {
-    None,
+    _None,
     Y,
 }
