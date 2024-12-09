@@ -26,7 +26,11 @@ pub const DESC_COMPUTE: wgpu::BindGroupLayoutDescriptor<'static> =
     };
 
 impl ComputePipeline {
-    pub fn new(device: &wgpu::Device, shader_path: &Path) -> Result<Self> {
+    pub fn new(
+        device: &wgpu::Device,
+        shader_path: &Path,
+        input_texture_layout: wgpu::BindGroupLayout,
+    ) -> Result<Self> {
         let shader_contents = std::fs::read_to_string(shader_path)?;
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(shader_path.to_str().unwrap()),
@@ -34,9 +38,6 @@ impl ComputePipeline {
         });
 
         info!("Creating compute pipeline");
-        // TODO: maybe move the fist bind group layout somewhere else. This is coupled with Volume
-        // right now
-        let input_texture_layout = device.create_bind_group_layout(&crate::volume::Volume::DESC);
         let storage_texture_layout = device.create_bind_group_layout(&DESC_COMPUTE);
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {

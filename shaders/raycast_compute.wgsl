@@ -1,9 +1,17 @@
+//struct Params {
+//  fancy_colors: u32,
+//  something_else: u32,
+//};
+
 @group(0) @binding(0)
 var volume_texture: texture_3d<f32>;
 @group(0) @binding(1)
 var volume_sampler: sampler;
 @group(1) @binding(0)
 var output_texture: texture_storage_2d<rgba8unorm, write>;
+//@group(2) @binding(0)
+//var<uniform> params: Params;
+
 
 fn ray_box_intersection(ray_origin: vec3<f32>, ray_direction: vec3<f32>) -> vec2<f32> {
     let box_min = vec3<f32>(0.0);

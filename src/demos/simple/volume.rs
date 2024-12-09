@@ -4,9 +4,9 @@ use crate::Result;
 use std::path::Path;
 
 pub struct Volume {
-    pub texture: wgpu::Texture,
-    pub bind_group: wgpu::BindGroup,
-    pub sampler: wgpu::Sampler,
+    texture: wgpu::Texture,
+    bind_group: wgpu::BindGroup,
+    sampler: wgpu::Sampler,
 }
 
 impl Volume {
@@ -104,6 +104,10 @@ impl Volume {
             bind_group,
             sampler,
         })
+    }
+
+    pub fn bind_group(&self) -> &wgpu::BindGroup {
+        &self.bind_group
     }
 }
 
