@@ -1,5 +1,5 @@
-use std::time::{Duration, Instant};
 /// Event loop that handles window events and triggers rendering
+use std::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 use winit::{
     event::*,
@@ -7,7 +7,7 @@ use winit::{
     keyboard::{KeyCode, PhysicalKey},
 };
 
-use crate::{context::Context, RenderingDemo, Result};
+use crate::{context::Context, demos::RenderingDemo, Result};
 
 #[tracing::instrument(skip(event_loop, ctx, rendering_algorithm))]
 pub fn run<T: std::fmt::Debug>(

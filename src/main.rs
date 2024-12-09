@@ -1,4 +1,3 @@
-use demos::RenderingDemo;
 use tracing::level_filters::LevelFilter;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
@@ -22,7 +21,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn run<Demo: RenderingDemo>() -> Result<()> {
+fn run<Demo: demos::RenderingDemo>() -> Result<()> {
     // Setup event loop and window.
     let event_loop = EventLoop::new()?;
     let window = WindowBuilder::new()
