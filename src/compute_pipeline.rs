@@ -34,6 +34,8 @@ impl ComputePipeline {
         });
 
         info!("Creating compute pipeline");
+        // TODO: maybe move the fist bind group layout somewhere else. This is coupled with Volume
+        // right now
         let input_texture_layout = device.create_bind_group_layout(&crate::volume::Volume::DESC);
         let storage_texture_layout = device.create_bind_group_layout(&DESC_COMPUTE);
         let render_pipeline_layout =
