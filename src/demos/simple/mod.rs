@@ -2,24 +2,21 @@ use std::path::Path;
 
 use crate::context;
 
-use super::RenderingAlgorithm;
+use super::RenderingDemo;
 use crate::Result;
 
 pub mod compute_pipeline;
 pub mod volume;
 
-pub struct SimpleRaycaster {
+pub struct Simple {
     volume: volume::Volume,                      // contains the bindgroup
     pipeline: compute_pipeline::ComputePipeline, // contains the bindgrouplayout
     compute_bind_group: wgpu::BindGroup,
 }
 
-impl RenderingAlgorithm for SimpleRaycaster {
+impl RenderingDemo for Simple {
     fn init(ctx: &mut context::Context, volume: volume::Volume) -> Result<Self> {
-        let compute_path = format!(
-            "{}/shaders/raycast_compute.wgsl",
-            env!("CARGO_MANIFEST_DIR")
-        );
+        let compute_path = format!("{}/shaders/simple_compute.wgsl", env!("CARGO_MANIFEST_DIR"));
         let input_texture_layout = ctx
             .device
             .create_bind_group_layout(&crate::volume::Volume::DESC);
@@ -37,7 +34,7 @@ impl RenderingAlgorithm for SimpleRaycaster {
             }],
         });
 
-        Ok(SimpleRaycaster {
+        Ok(Simple {
             volume,
             pipeline,
             compute_bind_group,

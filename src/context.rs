@@ -68,7 +68,7 @@ impl<'a> Context<'a> {
             desired_maximum_frame_latency: 2,
         };
 
-        let render_path = format!("{}/shaders/raycast_render.wgsl", env!("CARGO_MANIFEST_DIR"));
+        let render_path = format!("{}/shaders/render.wgsl", env!("CARGO_MANIFEST_DIR"));
         let render_pipeline = crate::context::render_pipeline::RenderPipeline::new(
             &device,
             Path::new(&render_path),
