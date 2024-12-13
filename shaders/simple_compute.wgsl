@@ -32,9 +32,25 @@ fn ray_box_intersection(ray_origin: vec3<f32>, ray_direction: vec3<f32>) -> vec2
     );
 }
 
+// Transfer function to map density to color
 fn transfer_function(density: f32) -> vec4<f32> {
     let intensity = clamp(density * 5.0, 0.0, 1.0);
-    return vec4<f32>(intensity, intensity, intensity, intensity);
+
+    var color = vec4<f32>(0.0, 0.0, 0.0, 1.0);
+    if density < 0.2 {
+        color = vec4<f32>(0.0, 0.5, 0, 1.0); // Green
+    } else if density < 0.4 {
+        color = vec4<f32>(0.0, 0.0, 1, 1.0); // Blue
+    } else if density < 0.6 {
+        color = vec4<f32>(0.0, 1.0, 1.0, 1.0); // Cyan
+    } else if density < 0.8 {
+        color = vec4<f32>(1.0, 1.0, 0.0, 1.0); // Yellow
+    } else {
+        color = vec4<f32>(1.0, 0, 0.0, 1.0);   // Red
+    }
+
+    color.a = intensity;
+    return color;
 }
 
 fn compute_gradient(volume: texture_3d<f32>, s: sampler, pos: vec3<f32>) -> vec3<f32> {

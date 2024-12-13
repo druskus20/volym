@@ -5,6 +5,7 @@ use tracing::info;
 
 use crate::Result;
 
+#[derive(Debug)]
 pub struct ComputePipeline {
     pub pipeline: wgpu::ComputePipeline,
     pub bind_group_layout: wgpu::BindGroupLayout,

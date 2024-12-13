@@ -3,10 +3,12 @@ use std::path::Path;
 
 // lib.rs
 use crate::render_pipeline;
+use tracing::debug;
 use winit::{event::WindowEvent, window::Window};
 
 use crate::Result;
 
+#[derive(Debug)]
 pub struct Context<'a> {
     pub surface: wgpu::Surface<'a>,
     pub device: wgpu::Device,
@@ -149,6 +151,7 @@ impl<'a> Context<'a> {
 
     pub fn update(&mut self) {}
 
+    #[tracing::instrument(skip(self))]
     pub fn render(&mut self) -> std::result::Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view = output
@@ -182,7 +185,9 @@ impl<'a> Context<'a> {
 
             render_pass.set_pipeline(self.render_pipeline.as_ref());
             render_pass.set_bind_group(0, &self.render_bind_group, &[]);
+            debug!(target = "render_pass", "Render bind group set");
             render_pass.draw(0..6, 0..1); // Draw a quad (2*3 vertices)
+            debug!(target = "render_pass", "Draw done");
         }
 
         self.queue.submit(Some(encoder.finish()));

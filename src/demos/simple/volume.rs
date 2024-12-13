@@ -3,6 +3,7 @@ use tracing::info;
 use crate::Result;
 use std::path::Path;
 
+#[derive(Debug)]
 pub struct Volume {
     _texture: wgpu::Texture,
     bind_group: wgpu::BindGroup,
@@ -32,7 +33,7 @@ impl Volume {
         ],
     };
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(device, queue))]
     pub fn new(
         path: &Path,
         flip_mode: FlipMode,

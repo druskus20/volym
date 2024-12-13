@@ -2,6 +2,7 @@
 use crate::Result;
 use std::path::Path;
 
+#[derive(Debug)]
 pub struct RenderPipeline {
     pub pipeline: wgpu::RenderPipeline,
     pub bind_group_layout: wgpu::BindGroupLayout,

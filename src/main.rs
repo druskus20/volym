@@ -1,8 +1,11 @@
-use tracing::level_filters::LevelFilter;
+use cli::Command;
+use tracing::debug;
+use tracing::info;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 use winit::{event_loop::EventLoop, window::WindowBuilder};
 
+mod cli;
 mod context;
 mod demos;
 mod event_loop;
@@ -16,9 +19,17 @@ use demos::simple::Simple;
 pub(crate) type Result<T> = color_eyre::eyre::Result<T>;
 
 fn main() -> Result<()> {
-    setup_tracing()?;
-    run::<Simple>()?;
-    Ok(())
+    let args = cli::ParsedArgs::parse_args();
+    debug!("Parsed arguments: {:?}", args);
+
+    setup_tracing(args.log_level.to_string())?;
+
+    match args.command {
+        Command::Start => {
+            info!("Starting the application...");
+            run::<Simple>()
+        }
+    }
 }
 
 fn run<Demo: demos::RenderingDemo>() -> Result<()> {
@@ -38,12 +49,12 @@ fn run<Demo: demos::RenderingDemo>() -> Result<()> {
     Ok(())
 }
 
-fn setup_tracing() -> Result<()> {
+fn setup_tracing(log_level: String) -> Result<()> {
     color_eyre::install()?;
     let s = tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .unwrap_or(EnvFilter::new(LevelFilter::INFO.to_string())),
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or(EnvFilter::new(log_level)),
         )
         .compact()
         .finish()
