@@ -2,9 +2,13 @@
 use std::path::Path;
 
 // lib.rs
-use crate::render_pipeline;
-use tracing::debug;
-use winit::{event::WindowEvent, window::Window};
+use crate::{camera::Camera, render_pipeline};
+use tracing::{debug, info};
+use winit::{
+    event::{ElementState, KeyEvent, MouseButton, WindowEvent},
+    keyboard::PhysicalKey,
+    window::Window,
+};
 
 use crate::Result;
 
@@ -22,6 +26,13 @@ pub struct Context<'a> {
 
     render_pipeline: render_pipeline::RenderPipeline,
     render_bind_group: wgpu::BindGroup,
+
+    camera: Camera,
+    camera_buffer: wgpu::Buffer,
+    pub camera_bind_group: wgpu::BindGroup,
+    pub camera_controller: crate::camera::Controller,
+
+    mouse_pressed: bool,
 }
 
 impl<'a> Context<'a> {
@@ -118,6 +129,11 @@ impl<'a> Context<'a> {
             ],
         });
 
+        let aspect = config.width as f32 / config.height as f32;
+        let (camera, camera_buffer, camera_bind_group) = Camera::new(aspect, &device);
+
+        let camera_controller = crate::camera::Controller::new(0.2, 0.2);
+
         Ok(Self {
             window,
             surface,
@@ -129,6 +145,12 @@ impl<'a> Context<'a> {
             texture_view,
             render_pipeline,
             render_bind_group,
+            camera,
+            camera_buffer,
+            camera_bind_group,
+            camera_controller,
+
+            mouse_pressed: false,
         })
     }
 
@@ -145,14 +167,49 @@ impl<'a> Context<'a> {
         }
     }
 
-    pub fn input(&mut self, _event: &WindowEvent) -> bool {
-        false
+    pub fn input(&mut self, event: &WindowEvent) -> bool {
+        let r = match event {
+            //WindowEvent::KeyboardInput {
+            //    event:
+            //        KeyEvent {
+            //            physical_key: PhysicalKey::Code(key),
+            //            state,
+            //            ..
+            //        },
+            //    ..
+            //} => self.camera_controller.process_keyboard(*key, *state),
+            WindowEvent::MouseWheel { delta, .. } => {
+                self.camera_controller.process_scroll(delta);
+                true
+            }
+            WindowEvent::MouseInput {
+                button: MouseButton::Left,
+                state,
+                ..
+            } => {
+                self.mouse_pressed = *state == ElementState::Pressed;
+                true
+            }
+            _ => false,
+        };
+
+        if r {
+            info!(target = "input", "Processed event: {:?}", event);
+        }
+        r
     }
 
-    pub fn update(&mut self) {}
+    pub fn update(&mut self, dt: std::time::Duration) {
+        self.camera_controller.update_camera(&mut self.camera, dt);
+        self.camera.update_buffer(&self.queue, &self.camera_buffer);
+    }
 
     #[tracing::instrument(skip(self))]
     pub fn render(&mut self) -> std::result::Result<(), wgpu::SurfaceError> {
+        println!("Camera Position: {:?}", self.camera.position);
+        println!("Camera Target: {:?}", self.camera.target);
+        println!("Horizontal Angle: {}", self.camera.horizontal_angle);
+        println!("Vertical Angle: {}", self.camera.vertical_angle);
         let output = self.surface.get_current_texture()?;
         let view = output
             .texture

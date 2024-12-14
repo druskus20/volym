@@ -42,9 +42,10 @@ pub fn run<T: std::fmt::Debug>(
                         }
                         WindowEvent::RedrawRequested => {
                             debug!("Redraw requested");
+                            let duration = last_update.elapsed();
                             ctx.window().request_redraw();
 
-                            ctx.update();
+                            ctx.update(duration);
                             rendering_algorithm.compute(ctx).unwrap();
                             match ctx.render() {
                                 Ok(_) => {

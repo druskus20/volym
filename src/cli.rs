@@ -1,4 +1,3 @@
-use crate::Result;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -33,9 +32,22 @@ impl ParsedArgs {
     }
 }
 
-#[derive(Subcommand, Default, Clone, Debug)]
+#[derive(Subcommand, Clone, Debug)]
 pub enum Command {
-    /// Start the application
+    /// Run the demo
+    #[clap(subcommand)]
+    Run(Demo),
+}
+
+impl Default for Command {
+    fn default() -> Self {
+        Command::Run(Demo::default())
+    }
+}
+
+#[derive(Subcommand, Debug, Default, Clone)]
+pub enum Demo {
+    /// A simple demo
     #[default]
-    Start,
+    Simple,
 }

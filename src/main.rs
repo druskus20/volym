@@ -1,10 +1,11 @@
 use cli::Command;
+use cli::Demo;
 use tracing::debug;
-use tracing::info;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 use winit::{event_loop::EventLoop, window::WindowBuilder};
 
+mod camera;
 mod cli;
 mod context;
 mod demos;
@@ -25,10 +26,7 @@ fn main() -> Result<()> {
     setup_tracing(args.log_level.to_string())?;
 
     match args.command {
-        Command::Start => {
-            info!("Starting the application...");
-            run::<Simple>()
-        }
+        Command::Run(Demo::Simple) => run::<Simple>(),
     }
 }
 

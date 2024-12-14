@@ -11,7 +11,7 @@ pub struct ComputePipeline {
     pub bind_group_layout: wgpu::BindGroupLayout,
 }
 
-pub const DESC_COMPUTE: wgpu::BindGroupLayoutDescriptor<'static> =
+pub const DESC_OUTPUT_TEXTURE: wgpu::BindGroupLayoutDescriptor<'static> =
     wgpu::BindGroupLayoutDescriptor {
         label: Some("Storage Texture Layour"),
         entries: &[wgpu::BindGroupLayoutEntry {
@@ -30,7 +30,9 @@ impl ComputePipeline {
     pub fn new(
         device: &wgpu::Device,
         shader_path: &Path,
-        input_texture_layout: wgpu::BindGroupLayout,
+        input_texture_layout: &wgpu::BindGroupLayout,
+        camera_layout: &wgpu::BindGroupLayout,
+        debug_matrix_layout: &wgpu::BindGroupLayout,
     ) -> Result<Self> {
         let shader_contents = std::fs::read_to_string(shader_path)?;
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -39,11 +41,16 @@ impl ComputePipeline {
         });
 
         info!("Creating compute pipeline");
-        let storage_texture_layout = device.create_bind_group_layout(&DESC_COMPUTE);
+        let output_texture_layout = device.create_bind_group_layout(&DESC_OUTPUT_TEXTURE);
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Compute Pipeline Layout"),
-                bind_group_layouts: &[&input_texture_layout, &storage_texture_layout],
+                bind_group_layouts: &[
+                    input_texture_layout,
+                    &output_texture_layout,
+                    camera_layout,
+                    debug_matrix_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -58,7 +65,7 @@ impl ComputePipeline {
 
         Ok(ComputePipeline {
             pipeline,
-            bind_group_layout: storage_texture_layout,
+            bind_group_layout: output_texture_layout,
         })
     }
 }

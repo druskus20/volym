@@ -13,6 +13,8 @@ color-eyre = "0.6.3"
 tracing-error = "0.2.1"
 pollster = "0.4.0"
 clap = { version = "4.5.23", features = ["derive"] }
+cgmath = "0.18.0"
+bytemuck = { version = "1.20.0", features = ["derive"] }
 
 
 # Enable a small amount of optimization in debug mode
