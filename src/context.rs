@@ -33,6 +33,7 @@ pub struct Context<'a> {
     pub camera_controller: crate::camera::Controller,
 
     mouse_pressed: bool,
+    last_mouse_position: Option<(f64, f64)>,
 }
 
 impl<'a> Context<'a> {
@@ -151,6 +152,7 @@ impl<'a> Context<'a> {
             camera_controller,
 
             mouse_pressed: false,
+            last_mouse_position: None,
         })
     }
 
@@ -178,6 +180,24 @@ impl<'a> Context<'a> {
             //        },
             //    ..
             //} => self.camera_controller.process_keyboard(*key, *state),
+            WindowEvent::CursorMoved { position, .. } => {
+                if self.mouse_pressed {
+                    let current_pos = (position.x, position.y);
+
+                    // Calculate delta movement when mouse is pressed
+                    if let Some(last_pos) = self.last_mouse_position {
+                        let dx = current_pos.0 - last_pos.0;
+                        let dy = current_pos.1 - last_pos.1;
+
+                        // Use the existing process_mouse method
+                        self.camera_controller.process_mouse(dx, dy);
+                    }
+
+                    // Update last mouse position
+                    self.last_mouse_position = Some(current_pos);
+                }
+                true
+            }
             WindowEvent::MouseWheel { delta, .. } => {
                 self.camera_controller.process_scroll(delta);
                 true

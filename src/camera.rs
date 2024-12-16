@@ -59,7 +59,7 @@ impl Camera {
             zfar: 1000000.0,
             horizontal_angle: 0.0,
             vertical_angle: 0.0,
-            distance: 10.0,
+            distance: 2.0,
         };
 
         let uniforms = CameraUniforms {
@@ -175,4 +175,3 @@ impl Controller {
         self.scroll = 0.0;
     }
 }
-

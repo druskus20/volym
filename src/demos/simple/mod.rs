@@ -111,7 +111,7 @@ impl RenderingDemo for Simple {
 
         let volume = volume::Volume::new(
             volume_path.as_ref(),
-            volume::FlipMode::Y,
+            volume::FlipMode::None,
             &ctx.device,
             &ctx.queue,
         )?;

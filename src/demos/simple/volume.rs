@@ -128,6 +128,6 @@ fn flip_y(data: &mut [u8], width: usize, height: usize, depth: usize) {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum FlipMode {
-    _None,
+    None,
     Y,
 }
