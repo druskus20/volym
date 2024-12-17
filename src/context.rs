@@ -5,8 +5,7 @@ use std::path::Path;
 use crate::{camera::Camera, render_pipeline};
 use tracing::{debug, info};
 use winit::{
-    event::{ElementState, KeyEvent, MouseButton, WindowEvent},
-    keyboard::PhysicalKey,
+    event::{ElementState, MouseButton, WindowEvent},
     window::Window,
 };
 
@@ -19,18 +18,17 @@ pub struct Context<'a> {
     pub queue: wgpu::Queue,
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
+
     _texture: wgpu::Texture,
-    pub texture_view: wgpu::TextureView,
+    pub computed_texture_view: wgpu::TextureView,
 
     window: &'a Window,
 
     render_pipeline: render_pipeline::RenderPipeline,
     render_bind_group: wgpu::BindGroup,
 
-    camera: Camera,
-    camera_buffer: wgpu::Buffer,
-    pub camera_bind_group: wgpu::BindGroup,
-    pub camera_controller: crate::camera::Controller,
+    pub camera: Camera,
+    pub camera_controller: crate::camera::CameraController,
 
     mouse_pressed: bool,
     last_mouse_position: Option<(f64, f64)>,
@@ -51,15 +49,7 @@ impl<'a> Context<'a> {
             .unwrap();
 
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    //required_features: wgpu::Features::default()
-                    //    | wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES,
-                    //// | wgpu::Features::POLYGON_MODE_LINE
-                    ..Default::default()
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor::default(), None)
             .await
             .unwrap();
 
@@ -70,6 +60,7 @@ impl<'a> Context<'a> {
             .find(|f| f.is_srgb())
             .copied()
             .unwrap_or(surface_caps.formats[0]);
+
         let size = window.inner_size();
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -131,9 +122,9 @@ impl<'a> Context<'a> {
         });
 
         let aspect = config.width as f32 / config.height as f32;
-        let (camera, camera_buffer, camera_bind_group) = Camera::new(aspect, &device);
+        let camera = Camera::new(aspect, &device);
 
-        let camera_controller = crate::camera::Controller::new(0.2, 0.2);
+        let camera_controller = crate::camera::CameraController::new(0.2, 0.2);
 
         Ok(Self {
             window,
@@ -143,14 +134,11 @@ impl<'a> Context<'a> {
             config,
             size,
             _texture: texture,
-            texture_view,
+            computed_texture_view: texture_view,
             render_pipeline,
             render_bind_group,
             camera,
-            camera_buffer,
-            camera_bind_group,
             camera_controller,
-
             mouse_pressed: false,
             last_mouse_position: None,
         })
@@ -214,22 +202,22 @@ impl<'a> Context<'a> {
         };
 
         if r {
-            info!(target = "input", "Processed event: {:?}", event);
+            debug!(target = "input", "Processed event: {:?}", event);
         }
         r
     }
 
     pub fn update(&mut self, dt: std::time::Duration) {
         self.camera_controller.update_camera(&mut self.camera, dt);
-        self.camera.update_buffer(&self.queue, &self.camera_buffer);
+        self.camera.update_buffer(&self.queue, &self.camera.buffer);
     }
 
     #[tracing::instrument(skip(self))]
     pub fn render(&mut self) -> std::result::Result<(), wgpu::SurfaceError> {
-        println!("Camera Position: {:?}", self.camera.position);
-        println!("Camera Target: {:?}", self.camera.target);
-        println!("Horizontal Angle: {}", self.camera.horizontal_angle);
-        println!("Vertical Angle: {}", self.camera.vertical_angle);
+        debug!("Camera Position: {:?}", self.camera.position);
+        debug!("Camera Target: {:?}", self.camera.target);
+        debug!("Horizontal Angle: {}", self.camera.horizontal_angle);
+        debug!("Vertical Angle: {}", self.camera.vertical_angle);
         let output = self.surface.get_current_texture()?;
         let view = output
             .texture

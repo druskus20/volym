@@ -1,15 +1,11 @@
 use std::time::Duration;
 
 use bytemuck::{Pod, Zeroable};
-use cgmath::{perspective, Deg, EuclideanSpace, InnerSpace, Matrix4, Point3, Vector3};
+use cgmath::{perspective, Deg, EuclideanSpace, Matrix4, Point3, Vector3};
 use wgpu::{util::DeviceExt, Buffer, Device, Queue};
-use winit::{
-    dpi::PhysicalPosition,
-    event::{ElementState, MouseScrollDelta},
-    keyboard::KeyCode,
-};
+use winit::{dpi::PhysicalPosition, event::MouseScrollDelta};
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug)]
 #[repr(C)]
 pub struct Camera {
     pub position: Vector3<f32>,
@@ -22,15 +18,18 @@ pub struct Camera {
     pub horizontal_angle: f32,
     pub vertical_angle: f32,
     pub distance: f32,
+    uniforms: CameraUniforms,
+    pub buffer: Buffer,
+    pub bind_group: wgpu::BindGroup,
 }
 
-#[repr(C)]
+#[repr(C, align(16))]
 #[derive(Debug, Copy, Clone, Pod, Zeroable)]
 struct CameraUniforms {
     view_matrix: [[f32; 4]; 4],
     projection_matrix: [[f32; 4]; 4],
     camera_position: [f32; 3],
-    _padding: f32, // For 16-byte alignment
+    _padding: f32,
 }
 
 impl Camera {
@@ -48,54 +47,60 @@ impl Camera {
         }],
     };
 
-    pub fn new(aspect: f32, device: &Device) -> (Self, wgpu::Buffer, wgpu::BindGroup) {
-        let camera = Self {
-            position: Vector3::new(0.5, 0.5, 0.5),
-            target: Vector3::new(0.5, 0.5, 0.5),
-            up: Vector3::new(0.0, 1.0, 0.0),
-            aspect,
-            fovy: 90.0,
-            znear: 0.001,
-            zfar: 1000000.0,
-            horizontal_angle: 0.0,
-            vertical_angle: 0.0,
-            distance: 2.0,
-        };
+    pub fn new(aspect: f32, device: &Device) -> Self {
+        let position = Vector3::new(0.5, 0.5, 0.5);
+        let target = Vector3::new(0.5, 0.5, 0.5);
+        let up = Vector3::new(0.0, 1.0, 0.0);
+        let fovy: f32 = 90.0;
+        let aspect: f32 = aspect;
+        let znear: f32 = 0.001;
+        let zfar: f32 = 1000000.0;
 
         let uniforms = CameraUniforms {
-            view_matrix: camera.view_matrix().into(),
-            projection_matrix: camera.projection_matrix().into(),
-            camera_position: camera.position.into(),
+            view_matrix: view_matrix(position, target, up).into(),
+            projection_matrix: projection_matrix(fovy, aspect, znear, zfar).into(),
+            camera_position: position.into(),
             _padding: 0.0,
         };
 
-        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
             contents: bytemuck::cast_slice(&[uniforms]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &device.create_bind_group_layout(&Self::DESC),
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: camera_buffer.as_entire_binding(),
+                resource: buffer.as_entire_binding(),
             }],
             label: Some("camera_bind_group"),
         });
 
-        (camera, camera_buffer, camera_bind_group)
+        Self {
+            position,
+            aspect,
+            fovy,
+            znear,
+            zfar,
+            horizontal_angle: 0.0,
+            vertical_angle: 0.0,
+            distance: 2.0,
+            target,
+            up,
+            uniforms,
+            buffer,
+            bind_group,
+        }
     }
 
     pub fn orbit(&mut self, horizontal_delta: f32, vertical_delta: f32, zoom_delta: f32) {
-        // Update angles
         self.horizontal_angle += horizontal_delta;
         self.vertical_angle = (self.vertical_angle + vertical_delta).clamp(-89.0, 89.0); // Prevent gimbal lock
 
-        // Update distance (zoom)
         self.distance = (self.distance + zoom_delta).clamp(1.0, 10.0);
 
-        // Calculate new camera position using spherical coordinates
         let h_rad = self.horizontal_angle.to_radians();
         let v_rad = self.vertical_angle.to_radians();
 
@@ -107,15 +112,11 @@ impl Camera {
     }
 
     pub fn view_matrix(&self) -> Matrix4<f32> {
-        Matrix4::look_at_rh(
-            Point3::from_vec(self.position),
-            Point3::from_vec(self.target),
-            self.up,
-        )
+        view_matrix(self.position, self.target, self.up)
     }
 
     pub fn projection_matrix(&self) -> Matrix4<f32> {
-        perspective(Deg(self.fovy), self.aspect, self.znear, self.zfar)
+        projection_matrix(self.fovy, self.aspect, self.znear, self.zfar)
     }
 
     pub fn update_buffer(&self, queue: &Queue, buffer: &Buffer) {
@@ -130,8 +131,16 @@ impl Camera {
     }
 }
 
+pub fn view_matrix(position: Vector3<f32>, target: Vector3<f32>, up: Vector3<f32>) -> Matrix4<f32> {
+    Matrix4::look_at_rh(Point3::from_vec(position), Point3::from_vec(target), up)
+}
+
+pub fn projection_matrix(fovy: f32, aspect: f32, znear: f32, zfar: f32) -> Matrix4<f32> {
+    perspective(Deg(fovy), aspect, znear, zfar)
+}
+
 #[derive(Debug)]
-pub struct Controller {
+pub struct CameraController {
     rotate_horizontal: f32,
     rotate_vertical: f32,
     scroll: f32,
@@ -139,7 +148,7 @@ pub struct Controller {
     zoom_sensitivity: f32,
 }
 
-impl Controller {
+impl CameraController {
     pub fn new(sensitivity: f32, zoom_sensitivity: f32) -> Self {
         Self {
             rotate_horizontal: 0.0,
@@ -151,7 +160,6 @@ impl Controller {
     }
 
     pub fn process_mouse(&mut self, mouse_dx: f64, mouse_dy: f64) {
-        // Invert and scale mouse movement
         self.rotate_horizontal = -mouse_dx as f32 * self.sensitivity;
         self.rotate_vertical = -mouse_dy as f32 * self.sensitivity;
     }
@@ -166,10 +174,8 @@ impl Controller {
     }
 
     pub fn update_camera(&mut self, camera: &mut Camera, dt: Duration) {
-        // Apply camera orbit with accumulated mouse movement
         camera.orbit(self.rotate_horizontal, self.rotate_vertical, self.scroll);
 
-        // Reset accumulated values
         self.rotate_horizontal = 0.0;
         self.rotate_vertical = 0.0;
         self.scroll = 0.0;

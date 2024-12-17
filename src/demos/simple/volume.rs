@@ -6,7 +6,7 @@ use std::path::Path;
 #[derive(Debug)]
 pub struct Volume {
     _texture: wgpu::Texture,
-    bind_group: wgpu::BindGroup,
+    pub bind_group: wgpu::BindGroup,
     _sampler: wgpu::Sampler,
 }
 
@@ -105,10 +105,6 @@ impl Volume {
             bind_group,
             _sampler: sampler,
         })
-    }
-
-    pub fn bind_group(&self) -> &wgpu::BindGroup {
-        &self.bind_group
     }
 }
 
