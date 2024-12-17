@@ -1,13 +1,14 @@
 use tracing::info;
+use wgpu::BindGroupLayout;
+
+// TODO abstract this away. with a trait that returns an array of bind groups maybe?
 
 use crate::Result;
 use std::path::Path;
 
 #[derive(Debug)]
 pub struct Volume {
-    _texture: wgpu::Texture,
     pub bind_group: wgpu::BindGroup,
-    _sampler: wgpu::Sampler,
 }
 
 impl Volume {
@@ -34,12 +35,12 @@ impl Volume {
     };
 
     #[tracing::instrument(skip(device, queue))]
-    pub fn new(
+    pub fn init(
         path: &Path,
         flip_mode: FlipMode,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-    ) -> Result<Self> {
+    ) -> Result<(Self, BindGroupLayout)> {
         info!("Loading volume from {:?}", path);
         let data = {
             let mut data = std::fs::read(path)?;
@@ -84,10 +85,10 @@ impl Volume {
             ..Default::default()
         });
 
-        let bind_group_layout = device.create_bind_group_layout(&Self::DESC);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let volume_layout = device.create_bind_group_layout(&Self::DESC);
+        let volume_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Volume Bind Group"),
-            layout: &bind_group_layout,
+            layout: &volume_layout,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -100,11 +101,12 @@ impl Volume {
             ],
         });
 
-        Ok(Volume {
-            _texture: texture,
-            bind_group,
-            _sampler: sampler,
-        })
+        Ok((
+            Volume {
+                bind_group: volume_group,
+            },
+            volume_layout,
+        ))
     }
 }
 

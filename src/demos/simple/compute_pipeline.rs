@@ -3,53 +3,43 @@ use std::path::Path;
 
 use tracing::info;
 
-use crate::Result;
+use crate::{demos::compute_base, rendering_context::Context, state::State, Result};
 
 #[derive(Debug)]
 pub struct ComputePipeline {
     pub pipeline: wgpu::ComputePipeline,
-    pub bind_group_layout: wgpu::BindGroupLayout,
+    pub base: compute_base::ComputeBase,
 }
-
-pub const DESC_OUTPUT_TEXTURE: wgpu::BindGroupLayoutDescriptor<'static> =
-    wgpu::BindGroupLayoutDescriptor {
-        label: Some("Storage Texture Layour"),
-        entries: &[wgpu::BindGroupLayoutEntry {
-            binding: 0,
-            visibility: wgpu::ShaderStages::COMPUTE,
-            ty: wgpu::BindingType::StorageTexture {
-                access: wgpu::StorageTextureAccess::WriteOnly,
-                format: wgpu::TextureFormat::Rgba8Unorm,
-                view_dimension: wgpu::TextureViewDimension::D2,
-            },
-            count: None,
-        }],
-    };
 
 impl ComputePipeline {
     pub fn new(
-        device: &wgpu::Device,
-        shader_path: &Path,
-        input_texture_layout: &wgpu::BindGroupLayout,
-        camera_layout: &wgpu::BindGroupLayout,
-        debug_matrix_layout: &wgpu::BindGroupLayout,
+        ctx: &Context,
+        state: &State,
+        output_texture_view: &wgpu::TextureView,
+        input_volume_layout: &wgpu::BindGroupLayout,
     ) -> Result<Self> {
-        let shader_contents = std::fs::read_to_string(shader_path)?;
+        let device = &ctx.device;
+        let base = compute_base::ComputeBase::new(ctx, state, output_texture_view);
+
+        let shader_path =
+            Path::new(&(format!("{}/shaders/simple_compute.wgsl", env!("CARGO_MANIFEST_DIR"))))
+                .to_path_buf();
+        let shader_contents = std::fs::read_to_string(&shader_path)?;
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some(shader_path.to_str().unwrap()),
             source: wgpu::ShaderSource::Wgsl(shader_contents.into()),
         });
 
         info!("Creating compute pipeline");
-        let output_texture_layout = device.create_bind_group_layout(&DESC_OUTPUT_TEXTURE);
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Compute Pipeline Layout"),
                 bind_group_layouts: &[
-                    input_texture_layout,
-                    &output_texture_layout,
-                    camera_layout,
-                    debug_matrix_layout,
+                    input_volume_layout,
+                    &base.output_texture_layout,
+                    &base.camera_layout,
+                    &base.debug_matrix_layout,
                 ],
                 push_constant_ranges: &[],
             });
@@ -63,10 +53,7 @@ impl ComputePipeline {
             cache: Default::default(),
         });
 
-        Ok(ComputePipeline {
-            pipeline,
-            bind_group_layout: output_texture_layout,
-        })
+        Ok(ComputePipeline { pipeline, base })
     }
 }
 
