@@ -1,46 +1,42 @@
 use tracing::info;
-use wgpu::BindGroupLayout;
 
 // TODO abstract this away. with a trait that returns an array of bind groups maybe?
 
-use crate::Result;
+use crate::{rendering_context::Context, Result};
 use std::path::Path;
 
 #[derive(Debug)]
 pub struct Volume {
     pub bind_group: wgpu::BindGroup,
+    pub layout: wgpu::BindGroupLayout,
 }
 
 impl Volume {
-    pub const DESC: wgpu::BindGroupLayoutDescriptor<'static> = wgpu::BindGroupLayoutDescriptor {
-        label: Some("Volume Bind Group Layout"),
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    view_dimension: wgpu::TextureViewDimension::D3,
-                    multisampled: false,
+    pub const DESC_VOLUME: wgpu::BindGroupLayoutDescriptor<'static> =
+        wgpu::BindGroupLayoutDescriptor {
+            label: Some("Volume Bind Group Layout"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        view_dimension: wgpu::TextureViewDimension::D3,
+                        multisampled: false,
+                    },
+                    count: None,
                 },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::COMPUTE,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                count: None,
-            },
-        ],
-    };
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+        };
 
-    #[tracing::instrument(skip(device, queue))]
-    pub fn init(
-        path: &Path,
-        flip_mode: FlipMode,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-    ) -> Result<(Self, BindGroupLayout)> {
+    #[tracing::instrument(skip(ctx))]
+    pub fn init(path: &Path, flip_mode: FlipMode, ctx: &Context) -> Result<Self> {
         info!("Loading volume from {:?}", path);
         let data = {
             let mut data = std::fs::read(path)?;
@@ -55,7 +51,7 @@ impl Volume {
             height: 256,
             depth_or_array_layers: 256,
         };
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
+        let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Volume Texture"),
             size,
             mip_level_count: 1,
@@ -67,7 +63,7 @@ impl Volume {
         });
         let texture_view = texture.create_view(&Default::default());
 
-        queue.write_texture(
+        ctx.queue.write_texture(
             texture.as_image_copy(),
             &data,
             wgpu::ImageDataLayout {
@@ -78,15 +74,15 @@ impl Volume {
             size,
         );
 
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+        let sampler = ctx.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Volume Sampler"),
             mag_filter: wgpu::FilterMode::Linear,
             min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
 
-        let volume_layout = device.create_bind_group_layout(&Self::DESC);
-        let volume_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let volume_layout = ctx.device.create_bind_group_layout(&Self::DESC_VOLUME);
+        let volume_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Volume Bind Group"),
             layout: &volume_layout,
             entries: &[
@@ -101,12 +97,10 @@ impl Volume {
             ],
         });
 
-        Ok((
-            Volume {
-                bind_group: volume_group,
-            },
-            volume_layout,
-        ))
+        Ok(Volume {
+            bind_group: volume_group,
+            layout: volume_layout,
+        })
     }
 }
 

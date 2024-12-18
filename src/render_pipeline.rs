@@ -33,7 +33,10 @@ pub const DESC_RENDER: wgpu::BindGroupLayoutDescriptor<'static> = wgpu::BindGrou
     ],
 };
 impl RenderPipeline {
-    pub fn new(device: &wgpu::Device, surface_config: &wgpu::SurfaceConfiguration) -> Result<Self> {
+    pub fn init(
+        device: &wgpu::Device,
+        surface_config: &wgpu::SurfaceConfiguration,
+    ) -> Result<Self> {
         let shader_path = format!("{}/shaders/render.wgsl", env!("CARGO_MANIFEST_DIR"));
         let shader_contents = std::fs::read_to_string(&shader_path)?;
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {

@@ -8,7 +8,8 @@ use winit::{
 };
 
 use crate::{
-    demos::Demo, render_pipeline::RenderPipeline, rendering_context::Context, state::State, Result,
+    demos::ComputeDemo, render_pipeline::RenderPipeline, rendering_context::Context, state::State,
+    Result,
 };
 
 #[tracing::instrument(skip(event_loop, ctx, demo))]
@@ -17,7 +18,7 @@ pub fn run<T: std::fmt::Debug>(
     mut ctx: Context,
     state: &mut State,
     render_pipeline: RenderPipeline,
-    demo: &impl Demo,
+    demo: &impl ComputeDemo,
 ) -> Result<()> {
     let mut last_update = Instant::now();
     let mut frame_count = 0;

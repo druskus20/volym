@@ -65,7 +65,7 @@ pub const DESC_CAMERA_UNIFORMS: wgpu::BindGroupLayoutDescriptor<'static> =
     };
 
 impl ComputeBase {
-    pub fn new(ctx: &Context, state: &State, output_texture_view: &wgpu::TextureView) -> Self {
+    pub fn new(ctx: &Context, state: &State, output_texture: &wgpu::Texture) -> Self {
         let camera_layout = ctx.device.create_bind_group_layout(&DESC_CAMERA_UNIFORMS);
         let debug_matrix_layout = ctx.device.create_bind_group_layout(&DESC_DEBUG_MATRIX);
         let output_texture_layout = ctx.device.create_bind_group_layout(&DESC_OUTPUT_TEXTURE);
@@ -115,12 +115,14 @@ impl ComputeBase {
             }],
         });
 
+        let output_texture_view =
+            output_texture.create_view(&wgpu::TextureViewDescriptor::default());
         let output_texture_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Compute Output Texture Bind Group"),
             layout: &output_texture_layout,
             entries: &[wgpu::BindGroupEntry {
                 binding: 0,
-                resource: wgpu::BindingResource::TextureView(output_texture_view),
+                resource: wgpu::BindingResource::TextureView(&output_texture_view),
             }],
         });
         Self {

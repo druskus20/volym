@@ -41,7 +41,7 @@ impl<'a> Context<'a> {
             .unwrap_or(surface_caps.formats[0]);
 
         let size = window.inner_size();
-        let config = wgpu::SurfaceConfiguration {
+        let surface_config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface_format,
             width: size.width,
@@ -59,7 +59,7 @@ impl<'a> Context<'a> {
             surface,
             device,
             queue,
-            surface_config: config,
+            surface_config,
             size,
         })
     }
