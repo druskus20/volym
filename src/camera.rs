@@ -1,8 +1,5 @@
-use std::time::Duration;
 
-use bytemuck::{Pod, Zeroable};
 use cgmath::{perspective, Deg, EuclideanSpace, Matrix4, Point3, Vector3};
-use wgpu::{util::DeviceExt, Buffer, Device, Queue};
 use winit::{dpi::PhysicalPosition, event::MouseScrollDelta};
 
 #[derive(Debug)]
@@ -18,36 +15,10 @@ pub struct Camera {
     pub horizontal_angle: f32,
     pub vertical_angle: f32,
     pub distance: f32,
-    uniforms: CameraUniforms,
-    pub buffer: Buffer,
-    pub bind_group: wgpu::BindGroup,
-}
-
-#[repr(C, align(16))]
-#[derive(Debug, Copy, Clone, Pod, Zeroable)]
-struct CameraUniforms {
-    view_matrix: [[f32; 4]; 4],
-    projection_matrix: [[f32; 4]; 4],
-    camera_position: [f32; 3],
-    _padding: f32,
 }
 
 impl Camera {
-    pub const DESC: wgpu::BindGroupLayoutDescriptor<'static> = wgpu::BindGroupLayoutDescriptor {
-        label: Some("Camera layout"),
-        entries: &[wgpu::BindGroupLayoutEntry {
-            binding: 0,
-            visibility: wgpu::ShaderStages::COMPUTE,
-            ty: wgpu::BindingType::Buffer {
-                ty: wgpu::BufferBindingType::Uniform,
-                has_dynamic_offset: false,
-                min_binding_size: None,
-            },
-            count: None,
-        }],
-    };
-
-    pub fn new(aspect: f32, device: &Device) -> Self {
+    pub fn new(aspect: f32) -> Self {
         let position = Vector3::new(0.5, 0.5, 0.5);
         let target = Vector3::new(0.5, 0.5, 0.5);
         let up = Vector3::new(0.0, 1.0, 0.0);
@@ -55,28 +26,6 @@ impl Camera {
         let aspect: f32 = aspect;
         let znear: f32 = 0.001;
         let zfar: f32 = 1000000.0;
-
-        let uniforms = CameraUniforms {
-            view_matrix: view_matrix(position, target, up).into(),
-            projection_matrix: projection_matrix(fovy, aspect, znear, zfar).into(),
-            camera_position: position.into(),
-            _padding: 0.0,
-        };
-
-        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&[uniforms]),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &device.create_bind_group_layout(&Self::DESC),
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: buffer.as_entire_binding(),
-            }],
-            label: Some("camera_bind_group"),
-        });
 
         Self {
             position,
@@ -89,9 +38,6 @@ impl Camera {
             distance: 2.0,
             target,
             up,
-            uniforms,
-            buffer,
-            bind_group,
         }
     }
 
@@ -112,31 +58,20 @@ impl Camera {
     }
 
     pub fn view_matrix(&self) -> Matrix4<f32> {
-        view_matrix(self.position, self.target, self.up)
+        {
+            Matrix4::look_at_rh(
+                Point3::from_vec(self.position),
+                Point3::from_vec(self.target),
+                self.up,
+            )
+        }
     }
 
     pub fn projection_matrix(&self) -> Matrix4<f32> {
-        projection_matrix(self.fovy, self.aspect, self.znear, self.zfar)
+        {
+            perspective(Deg(self.fovy), self.aspect, self.znear, self.zfar)
+        }
     }
-
-    pub fn update_buffer(&self, queue: &Queue, buffer: &Buffer) {
-        let uniforms = CameraUniforms {
-            view_matrix: self.view_matrix().into(),
-            projection_matrix: self.projection_matrix().into(),
-            camera_position: self.position.into(),
-            _padding: 0.0,
-        };
-
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&[uniforms]));
-    }
-}
-
-pub fn view_matrix(position: Vector3<f32>, target: Vector3<f32>, up: Vector3<f32>) -> Matrix4<f32> {
-    Matrix4::look_at_rh(Point3::from_vec(position), Point3::from_vec(target), up)
-}
-
-pub fn projection_matrix(fovy: f32, aspect: f32, znear: f32, zfar: f32) -> Matrix4<f32> {
-    perspective(Deg(fovy), aspect, znear, zfar)
 }
 
 #[derive(Debug)]
@@ -173,7 +108,7 @@ impl CameraController {
         };
     }
 
-    pub fn update_camera(&mut self, camera: &mut Camera, dt: Duration) {
+    pub fn update_camera(&mut self, camera: &mut Camera) {
         camera.orbit(self.rotate_horizontal, self.rotate_vertical, self.scroll);
 
         self.rotate_horizontal = 0.0;

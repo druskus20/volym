@@ -7,13 +7,17 @@ use winit::{
     keyboard::{KeyCode, PhysicalKey},
 };
 
-use crate::{context::Context, demos::RenderingDemo, Result};
+use crate::{
+    demos::Demo, render_pipeline::RenderPipeline, rendering_context::Context, state::State, Result,
+};
 
-#[tracing::instrument(skip(event_loop, ctx, rendering_algorithm))]
+#[tracing::instrument(skip(event_loop, ctx, demo))]
 pub fn run<T: std::fmt::Debug>(
     event_loop: EventLoop<T>,
-    ctx: &mut Context,
-    rendering_algorithm: impl RenderingDemo,
+    mut ctx: Context,
+    state: &mut State,
+    render_pipeline: RenderPipeline,
+    demo: &impl Demo,
 ) -> Result<()> {
     let mut last_update = Instant::now();
     let mut frame_count = 0;
@@ -25,7 +29,7 @@ pub fn run<T: std::fmt::Debug>(
                 ref event,
                 window_id,
             } if window_id == ctx.window().id() => {
-                if !ctx.input(event) {
+                if !state.process_input(event) {
                     match event {
                         WindowEvent::CloseRequested
                         | WindowEvent::KeyboardInput {
@@ -41,13 +45,22 @@ pub fn run<T: std::fmt::Debug>(
                             ctx.resize(*physical_size);
                         }
                         WindowEvent::RedrawRequested => {
-                            debug!("Redraw requested");
-                            let duration = last_update.elapsed();
+                            // queue another redraw
                             ctx.window().request_redraw();
 
-                            ctx.update(duration);
-                            rendering_algorithm.compute(ctx).unwrap();
-                            match ctx.render() {
+                            // update the state
+                            {
+                                state.update();
+                                demo.update_gpu_state(&ctx, state).unwrap();
+                            }
+
+                            //  compute and render
+                            let render_result = {
+                                demo.compute_pass(&ctx).unwrap();
+                                render_pipeline.render_pass(&ctx)
+                            };
+
+                            match render_result {
                                 Ok(_) => {
                                     frame_count += 1;
                                     let now = Instant::now();
