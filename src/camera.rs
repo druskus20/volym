@@ -1,12 +1,11 @@
-
-use cgmath::{perspective, Deg, EuclideanSpace, Matrix4, Point3, Vector3};
+use cgmath::{perspective, Deg, Matrix4, Point3, Vector3};
 use winit::{dpi::PhysicalPosition, event::MouseScrollDelta};
 
 #[derive(Debug)]
 #[repr(C)]
 pub struct Camera {
-    pub position: Vector3<f32>,
-    pub target: Vector3<f32>,
+    pub position: Point3<f32>,
+    pub target: Point3<f32>,
     pub up: Vector3<f32>,
     pub aspect: f32,
     pub fovy: f32,
@@ -19,8 +18,8 @@ pub struct Camera {
 
 impl Camera {
     pub fn new(aspect: f32) -> Self {
-        let position = Vector3::new(0.5, 0.5, 0.5);
-        let target = Vector3::new(0.5, 0.5, 0.5);
+        let position = Point3::new(0.5, 0.5, 0.5);
+        let target = Point3::new(0.5, 0.5, 0.5);
         let up = Vector3::new(0.0, 1.0, 0.0);
         let fovy: f32 = 90.0;
         let aspect: f32 = aspect;
@@ -50,7 +49,7 @@ impl Camera {
         let h_rad = self.horizontal_angle.to_radians();
         let v_rad = self.vertical_angle.to_radians();
 
-        self.position = Vector3::new(
+        self.position = Point3::new(
             self.target.x + self.distance * h_rad.sin() * v_rad.cos(),
             self.target.y + self.distance * v_rad.sin(),
             self.target.z + self.distance * h_rad.cos() * v_rad.cos(),
@@ -59,11 +58,7 @@ impl Camera {
 
     pub fn view_matrix(&self) -> Matrix4<f32> {
         {
-            Matrix4::look_at_rh(
-                Point3::from_vec(self.position),
-                Point3::from_vec(self.target),
-                self.up,
-            )
+            Matrix4::look_at_rh(self.position, self.target, self.up)
         }
     }
 
