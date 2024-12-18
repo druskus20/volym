@@ -37,7 +37,7 @@ impl Volume {
 
     #[tracing::instrument(skip(ctx))]
     pub fn init(path: &Path, flip_mode: FlipMode, ctx: &Context) -> Result<Self> {
-        info!("Loading volume from {:?}", path);
+        info!("Loading volume");
         let data = {
             let mut data = std::fs::read(path)?;
             if flip_mode == FlipMode::Y {

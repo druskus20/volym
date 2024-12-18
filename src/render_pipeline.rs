@@ -129,7 +129,7 @@ impl RenderPipeline {
         })
     }
 
-    #[tracing::instrument(skip(self))]
+    #[tracing::instrument(skip_all)]
     pub fn render_pass(&self, ctx: &Context) -> std::result::Result<(), wgpu::SurfaceError> {
         let output = ctx.surface.get_current_texture()?;
         let view = output

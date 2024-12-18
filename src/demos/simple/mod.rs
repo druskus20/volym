@@ -15,7 +15,6 @@ pub struct Simple {
 }
 
 impl ComputeDemo for Simple {
-    #[tracing::instrument()]
     fn init(ctx: &Context, state: &State, output_texture: &wgpu::Texture) -> Result<Self> {
         info!("Initializing Simple Demo");
 

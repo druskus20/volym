@@ -12,7 +12,7 @@ use crate::{
     Result,
 };
 
-#[tracing::instrument(skip(event_loop, ctx, demo))]
+#[tracing::instrument(skip_all)]
 pub fn run<T: std::fmt::Debug>(
     event_loop: EventLoop<T>,
     mut ctx: Context,

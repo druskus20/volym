@@ -31,6 +31,7 @@ impl ComputePipeline {
             label: Some(shader_path.to_str().unwrap()),
             source: wgpu::ShaderSource::Wgsl(shader_contents.into()),
         });
+        info!("Loaded shader module from {:?}", shader_path);
 
         info!("Creating compute pipeline");
 
