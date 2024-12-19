@@ -1,3 +1,4 @@
+use color_eyre::owo_colors::OwoColorize;
 use gpu_volume::GPUVolume;
 use tracing::info;
 
@@ -29,8 +30,15 @@ impl ComputeDemo for Simple {
         let volume = GPUVolume::init(volume_path.as_ref(), gpu_volume::FlipMode::None, ctx)?;
         info!("Volume loaded: {:?}", volume_path);
 
+        let transfer_function = transfer_function::TransferFunction1D::default().normalized();
+        info!("Transfer Function initialized");
+        info!("TF value at 0: {:?}", transfer_function.get(0.0));
+        info!("TF value at 0.5: {:?}", transfer_function.get(0.5));
+        info!("TF value at 1: {:?}", transfer_function.get(1.0));
+        info!("TF value at 128: {:?}", transfer_function.get(128.0));
+
         let transfer_function = gpu_transfer_function::GPUTransferFunction::new_texture_1d_rgbt(
-            &transfer_function::TransferFunction1D::new(255),
+            &transfer_function,
             &ctx.device,
             &ctx.queue,
         );

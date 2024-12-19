@@ -57,7 +57,7 @@ impl GPUTransferFunction {
         let mut texture_data: Vec<f32> = Vec::with_capacity((tf_size * 4) as usize);
 
         for i in 0..tf_size {
-            let tf_value = tf.function_vec[i as usize];
+            let tf_value = tf.get(i as f32);
             texture_data.push(tf_value.x); // r
             texture_data.push(tf_value.y); // g
             texture_data.push(tf_value.z); // b
