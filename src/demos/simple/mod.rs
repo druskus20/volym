@@ -1,17 +1,20 @@
+use gpu_volume::GPUVolume;
 use tracing::info;
 
-use crate::{rendering_context::Context, state::State};
+use crate::{rendering_context::Context, state::State, transfer_function};
 
-use super::ComputeDemo;
+use super::{compute_base, ComputeDemo};
 use crate::Result;
 
 pub mod compute_pipeline;
-pub mod volume;
+pub mod gpu_transfer_function;
+pub mod gpu_volume;
 
 #[derive(Debug)]
 pub struct Simple {
-    volume: volume::Volume, // contains the bindgroup
+    volume: gpu_volume::GPUVolume, // contains the bindgroup
     compute_pipeline: compute_pipeline::ComputePipeline,
+    transfer_function: gpu_transfer_function::GPUTransferFunction,
 }
 
 impl ComputeDemo for Simple {
@@ -23,25 +26,38 @@ impl ComputeDemo for Simple {
             env!("CARGO_MANIFEST_DIR")
         ));
 
-        let volume = volume::Volume::init(volume_path.as_ref(), volume::FlipMode::None, ctx)?;
+        let volume = GPUVolume::init(volume_path.as_ref(), gpu_volume::FlipMode::None, ctx)?;
         info!("Volume loaded: {:?}", volume_path);
 
-        let compute_pipeline =
-            compute_pipeline::ComputePipeline::new(ctx, state, output_texture, &volume.layout)?;
+        let transfer_function = gpu_transfer_function::GPUTransferFunction::new_texture_1d_rgbt(
+            &transfer_function::TransferFunction1D::new(255),
+            &ctx.device,
+            &ctx.queue,
+        );
+
+        let compute_pipeline = compute_pipeline::ComputePipeline::new(
+            ctx,
+            state,
+            output_texture,
+            &volume,
+            &transfer_function,
+        )?;
 
         Ok(Simple {
             volume,
             compute_pipeline,
+            transfer_function,
         })
     }
 
     fn update_gpu_state(&self, ctx: &Context, state: &State) -> Result<()> {
-        self.compute_pipeline.base.update(ctx, state);
+        self.compute_pipeline.base.update(ctx, state)?;
         Ok(())
     }
 
     fn compute_pass(&self, ctx: &Context) -> Result<()> {
-        self.compute_pipeline.compute_pass(ctx, &self.volume);
+        self.compute_pipeline
+            .compute_pass(ctx, &self.volume, &self.transfer_function);
         Ok(())
     }
 }
