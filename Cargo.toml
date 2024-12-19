@@ -15,6 +15,7 @@ pollster = "0.4.0"
 clap = { version = "4.5.23", features = ["derive"] }
 cgmath = "0.18.0"
 bytemuck = { version = "1.20.0", features = ["derive"] }
+image = "0.25.5"
 
 
 # Enable a small amount of optimization in debug mode

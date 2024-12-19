@@ -2,10 +2,16 @@
 use std::path::Path;
 
 use tracing::{debug, info};
+use tracing_subscriber::filter::BadFieldName;
 
-use crate::{demos::compute_base, rendering_context::Context, state::State, Result};
+use crate::{
+    demos::{compute_base, simple::gpu_transfer_function::GPUTransferFunction},
+    rendering_context::Context,
+    state::State,
+    Result,
+};
 
-use super::volume::Volume;
+use super::gpu_volume::GPUVolume;
 
 #[derive(Debug)]
 pub struct ComputePipeline {
@@ -18,7 +24,9 @@ impl ComputePipeline {
         ctx: &Context,
         state: &State,
         output_texture: &wgpu::Texture,
-        input_volume_layout: &wgpu::BindGroupLayout,
+        volume: &GPUVolume,
+        transfer_function: &GPUTransferFunction,
+        band_colors_layout: &wgpu::BindGroupLayout,
     ) -> Result<Self> {
         let device = &ctx.device;
         let base = compute_base::ComputeBase::new(ctx, state, output_texture);
@@ -39,10 +47,12 @@ impl ComputePipeline {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Compute Pipeline Layout"),
                 bind_group_layouts: &[
-                    input_volume_layout,
+                    &volume.layout,
                     &base.output_texture_layout,
                     &base.camera_layout,
                     &base.debug_matrix_layout,
+                    &transfer_function.layout,
+                    &band_colors_layout,
                 ],
                 push_constant_ranges: &[],
             });
@@ -59,7 +69,13 @@ impl ComputePipeline {
         Ok(ComputePipeline { pipeline, base })
     }
 
-    pub fn compute_pass(&self, ctx: &Context, volume: &Volume) {
+    pub fn compute_pass(
+        &self,
+        ctx: &Context,
+        volume: &GPUVolume,
+        transfer_function: &GPUTransferFunction,
+        band_colors_group: &wgpu::BindGroup,
+    ) {
         let mut encoder = ctx
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -76,19 +92,14 @@ impl ComputePipeline {
             compute_pass.set_pipeline(self.as_ref());
 
             let base = &self.base;
-            // Get the volume inputs
-            // TODO: consider moving the bind_group to the compute pipeline or something
+
+            // Bind the parameters to the shader
             compute_pass.set_bind_group(0, &volume.bind_group, &[]);
-            debug!(target = "compute_pass", "Volume inputs bind_group set");
-            // Get the pipeline inputs
             compute_pass.set_bind_group(1, &base.output_texture_group, &[]);
-            debug!(target = "compute_pass", "Output texture bind_group set");
-
             compute_pass.set_bind_group(2, &base.camera_group, &[]);
-            debug!(target = "compute_pass", "Camera bind_group set");
-
             compute_pass.set_bind_group(3, &base.debug_matrix_group, &[]);
-            debug!(target = "compute_pass", "Debug matrix bind_group set");
+            compute_pass.set_bind_group(4, &transfer_function.bind_group, &[]);
+            compute_pass.set_bind_group(5, band_colors_group, &[]);
 
             // size.width + 15 ensures that any leftover pixels (less than a full workgroup 16x16)
             // still require an additional workgro

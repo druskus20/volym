@@ -1,6 +1,9 @@
 use bytemuck::{Pod, Zeroable};
+use cgmath::{Matrix4, SquareMatrix};
 use wgpu::util::DeviceExt;
 
+use crate::transfer_function::TransferFunction1D;
+use crate::Result;
 use crate::{camera::Camera, rendering_context::Context, state::State};
 
 /// Base struct for every compute pipeline
@@ -70,7 +73,7 @@ impl ComputeBase {
         let debug_matrix_layout = ctx.device.create_bind_group_layout(&DESC_DEBUG_MATRIX);
         let output_texture_layout = ctx.device.create_bind_group_layout(&DESC_OUTPUT_TEXTURE);
 
-        let uniforms: CameraUniforms = CameraUniforms::from(&state.camera);
+        let uniforms: CameraUniforms = CameraUniforms::try_from(&state.camera).unwrap();
 
         let camera_buffer = ctx
             .device
@@ -136,29 +139,48 @@ impl ComputeBase {
         }
     }
 
-    pub fn update(&self, ctx: &Context, state: &State) {
-        let uniforms = CameraUniforms::from(&state.camera);
+    pub fn update(&self, ctx: &Context, state: &State) -> Result<()> {
+        let uniforms = CameraUniforms::try_from(&state.camera)?;
         ctx.queue
             .write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[uniforms]));
+
+        Ok(())
     }
 }
 
-#[repr(C, align(16))]
+// TODO:
+// pub struct GPUCamera {
+//     pub camera_buffer: wgpu::Buffer,
+//     pub camera_group: wgpu::BindGroup,
+// }
+
 #[derive(Debug, Copy, Clone, Pod, Zeroable)]
+#[repr(C, align(16))]
 pub struct CameraUniforms {
     view_matrix: [[f32; 4]; 4],
     projection_matrix: [[f32; 4]; 4],
+    inverse_view_proj: [[f32; 4]; 4],
     camera_position: [f32; 3],
     _padding: f32,
 }
 
-impl From<&Camera> for CameraUniforms {
-    fn from(camera: &Camera) -> Self {
-        CameraUniforms {
-            view_matrix: camera.view_matrix().into(),
-            projection_matrix: camera.projection_matrix().into(),
+impl TryFrom<&Camera> for CameraUniforms {
+    type Error = crate::Error;
+    fn try_from(camera: &Camera) -> std::result::Result<Self, Self::Error> {
+        let projection_matrix = camera.projection_matrix();
+        let view_matrix = camera.view_matrix();
+
+        let inverse_view_proj: Matrix4<f32> = (view_matrix.invert().ok_or(
+            color_eyre::eyre::eyre!("inverse_view_proj inversion failed"),
+        )? * projection_matrix
+            .invert()
+            .ok_or(color_eyre::eyre::eyre!("view_matrix inversion failed"))?);
+        Ok(CameraUniforms {
+            view_matrix: view_matrix.into(),
+            projection_matrix: projection_matrix.into(),
+            inverse_view_proj: inverse_view_proj.into(),
             camera_position: camera.position.into(),
             _padding: 0.0,
-        }
+        })
     }
 }

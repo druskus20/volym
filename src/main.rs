@@ -12,14 +12,17 @@ mod event_loop;
 mod render_pipeline;
 mod rendering_context;
 mod state;
+mod transfer_function;
 
 // Demos
 use demos::simple::Simple;
 
 pub(crate) type Result<T> = color_eyre::eyre::Result<T>;
+pub(crate) type Error = color_eyre::eyre::Report;
 
 fn main() -> Result<()> {
     let args = cli::ParsedArgs::parse_args();
+
     debug!("Parsed arguments: {:?}", args);
 
     setup_tracing(args.log_level.to_string())?;

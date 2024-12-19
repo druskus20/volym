@@ -1,17 +1,15 @@
 use tracing::info;
 
-// TODO abstract this away. with a trait that returns an array of bind groups maybe?
-
 use crate::{rendering_context::Context, Result};
 use std::path::Path;
 
 #[derive(Debug)]
-pub struct Volume {
+pub struct GPUVolume {
     pub bind_group: wgpu::BindGroup,
     pub layout: wgpu::BindGroupLayout,
 }
 
-impl Volume {
+impl GPUVolume {
     pub const DESC_VOLUME: wgpu::BindGroupLayoutDescriptor<'static> =
         wgpu::BindGroupLayoutDescriptor {
             label: Some("Volume Bind Group Layout"),
@@ -76,8 +74,6 @@ impl Volume {
 
         let sampler = ctx.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Volume Sampler"),
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
             ..Default::default()
         });
 
@@ -97,7 +93,7 @@ impl Volume {
             ],
         });
 
-        Ok(Volume {
+        Ok(GPUVolume {
             bind_group: volume_group,
             layout: volume_layout,
         })
