@@ -1,8 +1,9 @@
-use crate::rendering_context::Context;
 use tracing::debug;
 
 /// Render pipeline that displays the texture on the screen
 use crate::Result;
+
+use super::context::Context;
 
 #[derive(Debug)]
 pub struct RenderPipeline {

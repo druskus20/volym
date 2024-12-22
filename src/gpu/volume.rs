@@ -1,15 +1,17 @@
 use tracing::info;
 
-use crate::{rendering_context::Context, Result};
+use crate::Result;
 use std::path::Path;
 
+use super::context::Context;
+
 #[derive(Debug)]
-pub struct GPUVolume {
-    pub bind_group: wgpu::BindGroup,
+pub struct GpuVolume {
+    pub group: wgpu::BindGroup,
     pub layout: wgpu::BindGroupLayout,
 }
 
-impl GPUVolume {
+impl GpuVolume {
     pub const DESC_VOLUME: wgpu::BindGroupLayoutDescriptor<'static> =
         wgpu::BindGroupLayoutDescriptor {
             label: Some("Volume Bind Group Layout"),
@@ -93,8 +95,8 @@ impl GPUVolume {
             ],
         });
 
-        Ok(GPUVolume {
-            bind_group: volume_group,
+        Ok(GpuVolume {
+            group: volume_group,
             layout: volume_layout,
         })
     }

@@ -1,20 +1,34 @@
-use gpu_volume::GPUVolume;
+use std::path::Path;
+
 use tracing::info;
 
-use crate::{rendering_context::Context, state::State, transfer_function};
+use crate::{
+    demos::pipeline::{DemoPipeline, DemoPipelineConfig},
+    gpu::{
+        camera::GpuCamera,
+        context::Context,
+        debug_matrix::GpuDebugMatrix,
+        output_texture::GpuOutputTexture,
+        tf::GPUTransferFunction,
+        volume::{FlipMode, GpuVolume},
+    },
+    state::State,
+    transfer_function,
+};
 
 use super::ComputeDemo;
 use crate::Result;
 
-pub mod compute_pipeline;
-pub mod gpu_transfer_function;
-pub mod gpu_volume;
-
 #[derive(Debug)]
 pub struct Simple {
-    volume: gpu_volume::GPUVolume, // contains the bindgroup
-    compute_pipeline: compute_pipeline::ComputePipeline,
-    transfer_function: gpu_transfer_function::GPUTransferFunction,
+    compute_pipeline: super::pipeline::DemoPipeline,
+
+    // Resources
+    volume: GpuVolume,
+    transfer_function: GPUTransferFunction,
+    camera: GpuCamera,
+    debug_matrix: GpuDebugMatrix,
+    output_texture: GpuOutputTexture,
 }
 
 impl ComputeDemo for Simple {
@@ -25,45 +39,57 @@ impl ComputeDemo for Simple {
             "{}/assets/bonsai_256x256x256_uint8.raw",
             env!("CARGO_MANIFEST_DIR")
         ));
-
-        let volume = GPUVolume::init(volume_path.as_ref(), gpu_volume::FlipMode::None, ctx)?;
-        info!("Volume loaded: {:?}", volume_path);
-
+        let volume = GpuVolume::init(volume_path.as_ref(), FlipMode::None, ctx)?;
         let transfer_function = transfer_function::TransferFunction1D::default();
-        dbg!(&transfer_function);
-        info!("Transfer Function initialized");
+        let camera = GpuCamera::new(ctx, state);
+        let debug_matrix = GpuDebugMatrix::new(ctx, state);
+        let output_texture = GpuOutputTexture::new(ctx, state, output_texture);
+        let transfer_function =
+            GPUTransferFunction::new_texture_1d_rgbt(&transfer_function, &ctx.device, &ctx.queue);
 
-        transfer_function.save_to_file("transfer_function.png".as_ref())?;
+        let shader_path =
+            Path::new(&(format!("{}/shaders/simple_compute.wgsl", env!("CARGO_MANIFEST_DIR"))))
+                .to_path_buf();
 
-        let transfer_function = gpu_transfer_function::GPUTransferFunction::new_texture_1d_rgbt(
-            &transfer_function,
-            &ctx.device,
-            &ctx.queue,
-        );
-
-        let compute_pipeline = compute_pipeline::ComputePipeline::new(
+        let bind_group_layouts = &[
+            &volume.layout,
+            &output_texture.layout,
+            &camera.layout,
+            &debug_matrix.layout,
+            &transfer_function.layout,
+        ];
+        let compute_pipeline = DemoPipeline::with_config(
             ctx,
-            state,
-            output_texture,
-            &volume,
-            &transfer_function,
+            &DemoPipelineConfig {
+                shader_path,
+                bind_group_layouts,
+            },
         )?;
 
         Ok(Simple {
             volume,
             compute_pipeline,
             transfer_function,
+            camera,
+            debug_matrix,
+            output_texture,
         })
     }
 
     fn update_gpu_state(&self, ctx: &Context, state: &State) -> Result<()> {
-        self.compute_pipeline.base.update(ctx, state)?;
+        self.camera.update(ctx, state)?;
         Ok(())
     }
 
     fn compute_pass(&self, ctx: &Context) -> Result<()> {
-        self.compute_pipeline
-            .compute_pass(ctx, &self.volume, &self.transfer_function);
+        let bind_groups = &[
+            &self.volume.group,
+            &self.output_texture.group,
+            &self.camera.group,
+            &self.debug_matrix.group,
+            &self.transfer_function.group,
+        ];
+        self.compute_pipeline.compute_pass(ctx, bind_groups);
 
         Ok(())
     }

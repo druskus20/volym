@@ -1,5 +1,7 @@
 use cli::Command;
 use cli::Demo;
+use gpu::context::Context;
+use gpu::render_pipeline::RenderPipeline;
 use tracing::debug;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
@@ -9,10 +11,10 @@ mod camera;
 mod cli;
 mod demos;
 mod event_loop;
-mod render_pipeline;
-mod rendering_context;
 mod state;
 mod transfer_function;
+
+mod gpu;
 
 // Demos
 use demos::simple::Simple;
@@ -40,14 +42,14 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
         .build(&event_loop)?;
 
     // ctx needs to be independent to be moved into the event loop
-    let ctx = pollster::block_on(rendering_context::Context::new(&window))?;
+    let ctx = pollster::block_on(Context::new(&window))?;
 
     // state needs to be mutable - thus separate from ctx
     let aspect = ctx.surface_config.width as f32 / ctx.surface_config.height as f32;
     let mut state = state::State::new(aspect);
 
     // Setup render pipeline and compute demo.
-    let render_pipeline = render_pipeline::RenderPipeline::init(&ctx.device, &ctx.surface_config)?;
+    let render_pipeline = RenderPipeline::init(&ctx.device, &ctx.surface_config)?;
     let compute_demo = ComputeDemo::init(&ctx, &state, &render_pipeline.input_texture)?;
 
     event_loop::run(event_loop, ctx, &mut state, render_pipeline, &compute_demo)?;

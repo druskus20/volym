@@ -8,7 +8,9 @@ use winit::{
 };
 
 use crate::{
-    demos::ComputeDemo, render_pipeline::RenderPipeline, rendering_context::Context, state::State,
+    demos::ComputeDemo,
+    gpu::{context::Context, render_pipeline::RenderPipeline},
+    state::State,
     Result,
 };
 

@@ -1,8 +1,8 @@
-use crate::rendering_context::Context;
+use crate::gpu::context::Context;
 use crate::state::State;
 use crate::Result;
 
-pub mod compute_base;
+pub mod pipeline;
 pub mod simple;
 
 pub trait ComputeDemo: Sized {
@@ -10,3 +10,5 @@ pub trait ComputeDemo: Sized {
     fn update_gpu_state(&self, ctx: &Context, state: &State) -> Result<()>;
     fn compute_pass(&self, ctx: &Context) -> Result<()>;
 }
+
+struct DemoBase {}

@@ -104,7 +104,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    let step_size = 0.01;
+    let step_size = 0.005;
     var accumulated_color = vec3<f32>(0.0);
     var accumulated_alpha = 0.0;
 

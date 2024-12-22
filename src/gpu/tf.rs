@@ -4,7 +4,7 @@ use crate::transfer_function::TransferFunction1D;
 
 #[derive(Debug)]
 pub struct GPUTransferFunction {
-    pub bind_group: wgpu::BindGroup,
+    pub group: wgpu::BindGroup,
     pub layout: wgpu::BindGroupLayout,
 }
 
@@ -124,7 +124,7 @@ impl GPUTransferFunction {
         });
 
         Self {
-            bind_group: transfer_function_bind_group,
+            group: transfer_function_bind_group,
             layout: tf_layout,
         }
     }
