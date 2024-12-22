@@ -32,9 +32,6 @@ impl ComputeDemo for Simple {
         let transfer_function = transfer_function::TransferFunction1D::default();
         dbg!(&transfer_function);
         info!("Transfer Function initialized");
-        info!("TF value at 0: {:?}", transfer_function.get(0.0));
-        info!("TF value at 0.5: {:?}", transfer_function.get(0.5));
-        info!("TF value at 1: {:?}", transfer_function.get(1.0));
 
         transfer_function.save_to_file("transfer_function.png".as_ref())?;
 

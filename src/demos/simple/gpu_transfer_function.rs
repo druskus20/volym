@@ -37,13 +37,8 @@ impl GPUTransferFunction {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Self {
-        // let tf_size = tf.max_density + 1;
-        // // Calculate proper dimensions based on the actual texture data
-        // let pixel_size = 4; // RGBA, 4 bytes per pixel
-        // let bytes_per_row = tf_size * pixel_size;
         let tf_size = tf.max_density + 1;
         let bytes_per_color = 4;
-        //let num_colors = texture_data.len() / bytes_per_color;
 
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Transfer Function 1D Texture"),
@@ -66,8 +61,6 @@ impl GPUTransferFunction {
         //// Fill the texture data based on transfer function values
         for i in 0..tf_size {
             let tf_value = tf.get(i as f32 / tf_size as f32);
-
-            info!("i: {:3}, tf_value {:?}", i, tf_value);
             texture_data.push((tf_value.x * 255.0) as u8); // r
             texture_data.push((tf_value.y * 255.0) as u8); // g
             texture_data.push((tf_value.z * 255.0) as u8); // b
@@ -78,28 +71,6 @@ impl GPUTransferFunction {
             //}
             texture_data.push((alpha * 255.0) as u8);
         }
-
-        // Debug make a red -> blue texture half ahd half
-        //for i in 0..tf_size {
-        //    if i < tf_size / 2 {
-        //        texture_data.push(255);
-        //        texture_data.push(0);
-        //        texture_data.push(0);
-        //        texture_data.push(255);
-        //    } else {
-        //        texture_data.push(0);
-        //        texture_data.push(0);
-        //        texture_data.push(255);
-        //        texture_data.push(255);
-        //    }
-        //}
-
-        info!(
-            "Texture len / bytes_per_color: {}",
-            texture_data.len() / bytes_per_color as usize
-        );
-        info!("Texture size: {}", tf_size);
-
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor {
             label: Some("Transfer Function 1D View"),
             dimension: Some(wgpu::TextureViewDimension::D1),
@@ -107,7 +78,6 @@ impl GPUTransferFunction {
         });
 
         // Calculate proper dimensions based on the actual texture data
-
         queue.write_texture(
             texture.as_image_copy(),
             &texture_data,
