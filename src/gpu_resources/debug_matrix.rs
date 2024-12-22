@@ -1,19 +1,17 @@
-
 use crate::gpu_context::Context;
 use crate::state::State;
+
+use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
 
 /// Base struct for every compute pipeline
 #[derive(Debug)]
 pub struct GpuDebugMatrix {
-    pub layout: wgpu::BindGroupLayout,
-    pub group: wgpu::BindGroup,
+    texture_view: wgpu::TextureView,
 }
 
-pub const DESC_DEBUG_MATRIX: wgpu::BindGroupLayoutDescriptor<'static> =
-    wgpu::BindGroupLayoutDescriptor {
-        label: Some("Storage Texture Layour"),
-        entries: &[wgpu::BindGroupLayoutEntry {
-            binding: 0,
+impl GpuDebugMatrix {
+    pub const BIND_GROUP_LAYOUT_ENTRIES: &[BindGroupLayoutEntryUnbound] =
+        &[BindGroupLayoutEntryUnbound {
             visibility: wgpu::ShaderStages::COMPUTE,
             ty: wgpu::BindingType::StorageTexture {
                 access: wgpu::StorageTextureAccess::WriteOnly,
@@ -21,13 +19,9 @@ pub const DESC_DEBUG_MATRIX: wgpu::BindGroupLayoutDescriptor<'static> =
                 view_dimension: wgpu::TextureViewDimension::D2,
             },
             count: None,
-        }],
-    };
-impl GpuDebugMatrix {
+        }];
     pub fn new(ctx: &Context, state: &State) -> Self {
-        let debug_matrix_layout = ctx.device.create_bind_group_layout(&DESC_DEBUG_MATRIX);
-
-        let debug_matrix_texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Debug Matrix Texture"),
             size: wgpu::Extent3d {
                 width: ctx.surface_config.width,
@@ -41,21 +35,14 @@ impl GpuDebugMatrix {
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::STORAGE_BINDING,
             view_formats: &[],
         });
+        let texture_view = texture.create_view(&Default::default());
 
-        let debug_matrix_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Debug Matrix Bind Group"),
-            layout: &debug_matrix_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: wgpu::BindingResource::TextureView(
-                    &debug_matrix_texture.create_view(&wgpu::TextureViewDescriptor::default()),
-                ),
-            }],
-        });
+        Self { texture_view }
+    }
+}
 
-        Self {
-            layout: debug_matrix_layout,
-            group: debug_matrix_group,
-        }
+impl ToGpuResources for GpuDebugMatrix {
+    fn to_gpu_resources(&self) -> Vec<wgpu::BindingResource> {
+        vec![wgpu::BindingResource::TextureView(&self.texture_view)]
     }
 }

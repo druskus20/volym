@@ -10,5 +10,3 @@ pub trait ComputeDemo: Sized {
     fn update_gpu_state(&self, ctx: &Context, state: &State) -> Result<()>;
     fn compute_pass(&self, ctx: &Context) -> Result<()>;
 }
-
-struct DemoBase {}

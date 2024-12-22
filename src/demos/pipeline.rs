@@ -1,5 +1,5 @@
 /// Compute pipeline that does the he'a avy lifting and outputs to a texture
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::Result;
 use tracing::{debug, info};

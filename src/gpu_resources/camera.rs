@@ -6,19 +6,17 @@ use crate::gpu_context::Context;
 use crate::Result;
 use crate::{camera::Camera, state::State};
 
+use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
+
 /// Base struct for every compute pipeline
 #[derive(Debug)]
 pub struct GpuCamera {
-    pub layout: wgpu::BindGroupLayout,
-    pub group: wgpu::BindGroup,
     camera_buffer: wgpu::Buffer,
 }
 
-pub const DESC_CAMERA_UNIFORMS: wgpu::BindGroupLayoutDescriptor<'static> =
-    wgpu::BindGroupLayoutDescriptor {
-        label: Some("Camera layout"),
-        entries: &[wgpu::BindGroupLayoutEntry {
-            binding: 0,
+impl GpuCamera {
+    pub const BIND_GROUP_LAYOUT_ENTRIES: &[BindGroupLayoutEntryUnbound] =
+        &[BindGroupLayoutEntryUnbound {
             visibility: wgpu::ShaderStages::COMPUTE,
             ty: wgpu::BindingType::Buffer {
                 ty: wgpu::BufferBindingType::Uniform,
@@ -26,13 +24,8 @@ pub const DESC_CAMERA_UNIFORMS: wgpu::BindGroupLayoutDescriptor<'static> =
                 min_binding_size: None,
             },
             count: None,
-        }],
-    };
-
-impl GpuCamera {
+        }];
     pub fn new(ctx: &Context, state: &State) -> Self {
-        let camera_layout = ctx.device.create_bind_group_layout(&DESC_CAMERA_UNIFORMS);
-
         let uniforms: CameraUniforms = CameraUniforms::try_from(&state.camera).unwrap();
         let camera_buffer = ctx
             .device
@@ -42,20 +35,7 @@ impl GpuCamera {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
-        let camera_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &camera_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: camera_buffer.as_entire_binding(),
-            }],
-            label: Some("camera_bind_group"),
-        });
-
-        Self {
-            layout: camera_layout,
-            group: camera_group,
-            camera_buffer,
-        }
+        Self { camera_buffer }
     }
     pub fn update(&self, ctx: &Context, state: &State) -> Result<()> {
         let uniforms = CameraUniforms::try_from(&state.camera)?;
@@ -63,6 +43,12 @@ impl GpuCamera {
             .write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[uniforms]));
 
         Ok(())
+    }
+}
+
+impl ToGpuResources for GpuCamera {
+    fn to_gpu_resources(&self) -> Vec<wgpu::BindingResource> {
+        vec![self.camera_buffer.as_entire_binding()]
     }
 }
 

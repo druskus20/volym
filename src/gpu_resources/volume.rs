@@ -5,35 +5,31 @@ use std::path::Path;
 
 use crate::gpu_context::Context;
 
+use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
+
 #[derive(Debug)]
 pub struct GpuVolume {
-    pub group: wgpu::BindGroup,
-    pub layout: wgpu::BindGroupLayout,
+    texture_view: wgpu::TextureView,
+    sampler: wgpu::Sampler,
 }
 
 impl GpuVolume {
-    pub const DESC_VOLUME: wgpu::BindGroupLayoutDescriptor<'static> =
-        wgpu::BindGroupLayoutDescriptor {
-            label: Some("Volume Bind Group Layout"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D3,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        };
+    pub const BIND_GROUP_LAYOUT_ENTRIES: &[BindGroupLayoutEntryUnbound] = &[
+        BindGroupLayoutEntryUnbound {
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                view_dimension: wgpu::TextureViewDimension::D3,
+                multisampled: false,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntryUnbound {
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+            count: None,
+        },
+    ];
 
     #[tracing::instrument(skip(ctx))]
     pub fn init(path: &Path, flip_mode: FlipMode, ctx: &Context) -> Result<Self> {
@@ -79,26 +75,19 @@ impl GpuVolume {
             ..Default::default()
         });
 
-        let volume_layout = ctx.device.create_bind_group_layout(&Self::DESC_VOLUME);
-        let volume_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Volume Bind Group"),
-            layout: &volume_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                },
-            ],
-        });
-
         Ok(GpuVolume {
-            group: volume_group,
-            layout: volume_layout,
+            texture_view,
+            sampler,
         })
+    }
+}
+
+impl ToGpuResources for GpuVolume {
+    fn to_gpu_resources(&self) -> Vec<wgpu::BindingResource> {
+        vec![
+            wgpu::BindingResource::TextureView(&self.texture_view),
+            wgpu::BindingResource::Sampler(&self.sampler),
+        ]
     }
 }
 

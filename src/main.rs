@@ -2,7 +2,6 @@ use cli::Command;
 use cli::Demo;
 use gpu_context::Context;
 use render_pipeline::RenderPipeline;
-use tracing::debug;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 use winit::{event_loop::EventLoop, window::WindowBuilder};

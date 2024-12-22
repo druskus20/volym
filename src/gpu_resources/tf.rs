@@ -1,36 +1,31 @@
-use tracing::info;
 
 use crate::transfer_function::TransferFunction1D;
 
+use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
+
 #[derive(Debug)]
 pub struct GPUTransferFunction {
-    pub group: wgpu::BindGroup,
-    pub layout: wgpu::BindGroupLayout,
+    texture_view: wgpu::TextureView,
+    sampler: wgpu::Sampler,
 }
 
 impl GPUTransferFunction {
-    const DESC_TRANSFER_FUNCTION: wgpu::BindGroupLayoutDescriptor<'static> =
-        wgpu::BindGroupLayoutDescriptor {
-            label: Some("Transfer Function Bind Group Layout"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                        view_dimension: wgpu::TextureViewDimension::D1,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::COMPUTE,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        };
+    pub const BIND_GROUP_LAYOUT_ENTRIES: &[BindGroupLayoutEntryUnbound] = &[
+        BindGroupLayoutEntryUnbound {
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                view_dimension: wgpu::TextureViewDimension::D1,
+                multisampled: false,
+            },
+            count: None,
+        },
+        BindGroupLayoutEntryUnbound {
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+            count: None,
+        },
+    ];
 
     pub fn new_texture_1d_rgbt(
         tf: &TransferFunction1D,
@@ -104,28 +99,18 @@ impl GPUTransferFunction {
             ..Default::default()
         });
 
-        info!("Sampler: {:?}", sampler);
-
-        let tf_layout = device.create_bind_group_layout(&Self::DESC_TRANSFER_FUNCTION);
-
-        let transfer_function_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Transfer Function Bind Group"),
-            layout: &tf_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                },
-            ],
-        });
-
         Self {
-            group: transfer_function_bind_group,
-            layout: tf_layout,
+            texture_view,
+            sampler,
         }
+    }
+}
+
+impl ToGpuResources for GPUTransferFunction {
+    fn to_gpu_resources(&self) -> Vec<wgpu::BindingResource> {
+        vec![
+            wgpu::BindingResource::TextureView(&self.texture_view),
+            wgpu::BindingResource::Sampler(&self.sampler),
+        ]
     }
 }
