@@ -48,7 +48,7 @@ impl GPUTransferFunction {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Transfer Function 1D Texture"),
             size: wgpu::Extent3d {
-                width: tf_size as u32,
+                width: tf_size,
                 height: 1,
                 depth_or_array_layers: 1,
             },
@@ -113,11 +113,11 @@ impl GPUTransferFunction {
             &texture_data,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: Some(tf_size as u32 * bytes_per_color as u32),
+                bytes_per_row: Some(tf_size * bytes_per_color),
                 rows_per_image: Some(1),
             },
             wgpu::Extent3d {
-                width: tf_size as u32,
+                width: tf_size,
                 height: 1,
                 depth_or_array_layers: 1,
             },

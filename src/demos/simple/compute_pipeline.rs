@@ -2,7 +2,6 @@
 use std::path::Path;
 
 use tracing::{debug, info};
-use tracing_subscriber::filter::BadFieldName;
 
 use crate::{
     demos::{compute_base, simple::gpu_transfer_function::GPUTransferFunction},
@@ -26,7 +25,6 @@ impl ComputePipeline {
         output_texture: &wgpu::Texture,
         volume: &GPUVolume,
         transfer_function: &GPUTransferFunction,
-        band_colors_layout: &wgpu::BindGroupLayout,
     ) -> Result<Self> {
         let device = &ctx.device;
         let base = compute_base::ComputeBase::new(ctx, state, output_texture);
@@ -52,7 +50,6 @@ impl ComputePipeline {
                     &base.camera_layout,
                     &base.debug_matrix_layout,
                     &transfer_function.layout,
-                    &band_colors_layout,
                 ],
                 push_constant_ranges: &[],
             });
@@ -74,7 +71,6 @@ impl ComputePipeline {
         ctx: &Context,
         volume: &GPUVolume,
         transfer_function: &GPUTransferFunction,
-        band_colors_group: &wgpu::BindGroup,
     ) {
         let mut encoder = ctx
             .device
@@ -99,7 +95,6 @@ impl ComputePipeline {
             compute_pass.set_bind_group(2, &base.camera_group, &[]);
             compute_pass.set_bind_group(3, &base.debug_matrix_group, &[]);
             compute_pass.set_bind_group(4, &transfer_function.bind_group, &[]);
-            compute_pass.set_bind_group(5, band_colors_group, &[]);
 
             // size.width + 15 ensures that any leftover pixels (less than a full workgroup 16x16)
             // still require an additional workgro

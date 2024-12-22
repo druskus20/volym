@@ -2,7 +2,6 @@ use bytemuck::{Pod, Zeroable};
 use cgmath::{Matrix4, SquareMatrix};
 use wgpu::util::DeviceExt;
 
-use crate::transfer_function::TransferFunction1D;
 use crate::Result;
 use crate::{camera::Camera, rendering_context::Context, state::State};
 
@@ -170,11 +169,11 @@ impl TryFrom<&Camera> for CameraUniforms {
         let projection_matrix = camera.projection_matrix();
         let view_matrix = camera.view_matrix();
 
-        let inverse_view_proj: Matrix4<f32> = (view_matrix.invert().ok_or(
+        let inverse_view_proj: Matrix4<f32> = view_matrix.invert().ok_or(
             color_eyre::eyre::eyre!("inverse_view_proj inversion failed"),
         )? * projection_matrix
             .invert()
-            .ok_or(color_eyre::eyre::eyre!("view_matrix inversion failed"))?);
+            .ok_or(color_eyre::eyre::eyre!("view_matrix inversion failed"))?;
         Ok(CameraUniforms {
             view_matrix: view_matrix.into(),
             projection_matrix: projection_matrix.into(),

@@ -119,6 +119,12 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             0.0
         ).r;
 
+    // Filter out low density noise
+        if density < 0.12 { // Adjust this threshold value to find the right balance
+            current_distance += step_size;
+            continue;
+        }
+
         // Sample transfer function
         let transfer_color = textureSampleLevel(
             transfer_function_texture,

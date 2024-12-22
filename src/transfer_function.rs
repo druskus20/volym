@@ -3,7 +3,7 @@ use cgmath::Vector4;
 use std::path::Path;
 
 #[derive(Debug, Clone, Copy)]
-struct TransferControlPoint {
+pub struct TransferControlPoint {
     color: Vector4<f32>,
     iso_value: f32,
 }
@@ -26,11 +26,11 @@ impl Default for TransferFunction1D {
         });
         tf.add_rgb_control_point(TransferControlPoint {
             color: Vector4::new(0.0, 1.0, 1.0, 1.0), // Cyan
-            iso_value: 0.33,                         // ~102/255
+            iso_value: 0.4,                          // ~102/255
         });
         tf.add_rgb_control_point(TransferControlPoint {
             color: Vector4::new(1.0, 1.0, 0.0, 1.0), // Yellow
-            iso_value: 0.66,                         // ~153/255
+            iso_value: 0.6,                          // ~153/255
         });
         tf.add_rgb_control_point(TransferControlPoint {
             color: Vector4::new(1.0, 0.0, 0.0, 1.0), // Red
