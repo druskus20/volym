@@ -1,4 +1,4 @@
-use crate::gpu::context::Context;
+use crate::gpu_context::Context;
 use crate::state::State;
 use crate::Result;
 

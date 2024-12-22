@@ -8,10 +8,7 @@ use winit::{
 };
 
 use crate::{
-    demos::ComputeDemo,
-    gpu::{context::Context, render_pipeline::RenderPipeline},
-    state::State,
-    Result,
+    demos::ComputeDemo, gpu_context::Context, render_pipeline::RenderPipeline, state::State, Result,
 };
 
 #[tracing::instrument(skip_all)]

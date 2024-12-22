@@ -4,9 +4,9 @@ use tracing::info;
 
 use crate::{
     demos::pipeline::{DemoPipeline, DemoPipelineConfig},
-    gpu::{
+    gpu_context::Context,
+    gpu_resources::{
         camera::GpuCamera,
-        context::Context,
         debug_matrix::GpuDebugMatrix,
         output_texture::GpuOutputTexture,
         tf::GPUTransferFunction,

@@ -1,7 +1,7 @@
 use cli::Command;
 use cli::Demo;
-use gpu::context::Context;
-use gpu::render_pipeline::RenderPipeline;
+use gpu_context::Context;
+use render_pipeline::RenderPipeline;
 use tracing::debug;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
@@ -11,10 +11,11 @@ mod camera;
 mod cli;
 mod demos;
 mod event_loop;
+mod gpu_context;
+mod gpu_resources;
+mod render_pipeline;
 mod state;
 mod transfer_function;
-
-mod gpu;
 
 // Demos
 use demos::simple::Simple;
@@ -24,11 +25,7 @@ pub(crate) type Error = color_eyre::eyre::Report;
 
 fn main() -> Result<()> {
     let args = cli::ParsedArgs::parse_args();
-
-    debug!("Parsed arguments: {:?}", args);
-
     setup_tracing(args.log_level.to_string())?;
-
     match args.command {
         Command::Run(Demo::Simple) => run::<Simple>(),
     }

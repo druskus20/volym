@@ -1,9 +1,10 @@
 /// Compute pipeline that does the he'a avy lifting and outputs to a texture
 use std::path::{Path, PathBuf};
 
+use crate::Result;
 use tracing::{debug, info};
 
-use crate::{gpu::context::Context, Result};
+use crate::gpu_context::Context;
 
 #[derive(Debug)]
 pub struct DemoPipeline {

@@ -3,7 +3,7 @@ use tracing::info;
 use crate::Result;
 use std::path::Path;
 
-use super::context::Context;
+use crate::gpu_context::Context;
 
 #[derive(Debug)]
 pub struct GpuVolume {

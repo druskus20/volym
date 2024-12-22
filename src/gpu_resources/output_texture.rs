@@ -1,7 +1,7 @@
 
 use crate::state::State;
 
-use super::context::Context;
+use crate::gpu_context::Context;
 
 #[derive(Debug)]
 pub struct GpuOutputTexture {

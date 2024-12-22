@@ -2,7 +2,7 @@ use bytemuck::{Pod, Zeroable};
 use cgmath::{Matrix4, SquareMatrix};
 use wgpu::util::DeviceExt;
 
-use super::context::Context;
+use crate::gpu_context::Context;
 use crate::Result;
 use crate::{camera::Camera, state::State};
 
@@ -41,6 +41,7 @@ impl GpuCamera {
                 contents: bytemuck::cast_slice(&[uniforms]),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
+
         let camera_group = ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &camera_layout,
             entries: &[wgpu::BindGroupEntry {
