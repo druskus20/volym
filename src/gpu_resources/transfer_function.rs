@@ -1,5 +1,4 @@
-
-use crate::transfer_function::TransferFunction1D;
+use crate::transfer_function::TransferFunction;
 
 use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
 
@@ -28,7 +27,7 @@ impl GPUTransferFunction {
     ];
 
     pub fn new_texture_1d_rgbt(
-        tf: &TransferFunction1D,
+        tf: &TransferFunction,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Self {

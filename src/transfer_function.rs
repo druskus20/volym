@@ -9,14 +9,14 @@ pub struct TransferControlPoint {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct TransferFunction1D {
+pub(crate) struct TransferFunction {
     pub max_density: u32,
     rgb_points: Vec<TransferControlPoint>,
     alpha_points: Vec<TransferControlPoint>,
     function_vec: Vec<Vector4<f32>>,
 }
 
-impl Default for TransferFunction1D {
+impl Default for TransferFunction {
     fn default() -> Self {
         let mut tf = Self::new(255);
         // RGB Control Points - normalized iso_values (0.0 to 1.0)
@@ -51,7 +51,7 @@ impl Default for TransferFunction1D {
     }
 }
 
-impl TransferFunction1D {
+impl TransferFunction {
     pub fn new(max_density: u32) -> Self {
         Self {
             max_density,

@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use tracing::info;
-use wgpu::BindGroupLayoutEntry;
 
 use crate::{
     demos::pipeline::{DemoPipeline, DemoPipelineConfig},
@@ -46,34 +45,35 @@ impl ComputeDemo for Simple {
             env!("CARGO_MANIFEST_DIR")
         ));
         let volume = GpuVolume::init(volume_path.as_ref(), FlipMode::None, ctx)?;
-        let transfer_function = transfer_function::TransferFunction1D::default();
+        let transfer_function = transfer_function::TransferFunction::default();
         let camera = GpuCamera::new(ctx, state);
         let debug_matrix = GpuDebugMatrix::new(ctx, state);
         let output_texture = GpuOutputTexture::new(ctx, state, output_texture);
         let transfer_function =
             GPUTransferFunction::new_texture_1d_rgbt(&transfer_function, &ctx.device, &ctx.queue);
 
+        let base_inputs_layout = layout_from_unbound_entries(
+            ctx,
+            "Base Inputs Layout",
+            &[
+                GpuVolume::BIND_GROUP_LAYOUT_ENTRIES,
+                GpuCamera::BIND_GROUP_LAYOUT_ENTRIES,
+                GPUTransferFunction::BIND_GROUP_LAYOUT_ENTRIES,
+            ],
+        );
+
+        let base_outputs_layout = layout_from_unbound_entries(
+            ctx,
+            "Base Outputs Layout",
+            &[
+                GpuOutputTexture::BIND_GROUP_LAYOUT_ENTRIES,
+                GpuDebugMatrix::BIND_GROUP_LAYOUT_ENTRIES,
+            ],
+        );
+
         let shader_path =
             Path::new(&(format!("{}/shaders/simple_compute.wgsl", env!("CARGO_MANIFEST_DIR"))))
                 .to_path_buf();
-
-        let base_inputs = [
-            GpuVolume::BIND_GROUP_LAYOUT_ENTRIES,
-            GpuCamera::BIND_GROUP_LAYOUT_ENTRIES,
-            GPUTransferFunction::BIND_GROUP_LAYOUT_ENTRIES,
-        ];
-
-        let base_outputs = [
-            GpuOutputTexture::BIND_GROUP_LAYOUT_ENTRIES,
-            GpuDebugMatrix::BIND_GROUP_LAYOUT_ENTRIES,
-        ];
-
-        let base_inputs_layout =
-            layout_from_unbound_entries(ctx, "Base Inputs Layout", &base_inputs);
-
-        let base_outputs_layout =
-            layout_from_unbound_entries(ctx, "Base Outputs Layout", &base_outputs);
-
         let compute_pipeline = DemoPipeline::with_config(
             ctx,
             &DemoPipelineConfig {
@@ -100,29 +100,25 @@ impl ComputeDemo for Simple {
     }
 
     fn compute_pass(&self, ctx: &Context) -> Result<()> {
-        let base_inputs_resources = [
-            self.volume.to_gpu_resources(),
-            self.camera.to_gpu_resources(),
-            self.transfer_function.to_gpu_resources(),
-        ];
-
-        let base_outputs_resources = [
-            self.output_texture.to_gpu_resources(),
-            self.debug_matrix.to_gpu_resources(),
-        ];
-
         let base_inputs_group = bindgroup_from_resources(
             ctx,
             "Base Inputs Bind Group",
             &self.base_inputs_layout,
-            &base_inputs_resources,
+            &[
+                self.volume.to_gpu_resources(),
+                self.camera.to_gpu_resources(),
+                self.transfer_function.to_gpu_resources(),
+            ],
         );
 
         let base_outputs_group = bindgroup_from_resources(
             ctx,
             "Base Outputs Bind Group",
             &self.base_outputs_layout,
-            &base_outputs_resources,
+            &[
+                self.output_texture.to_gpu_resources(),
+                self.debug_matrix.to_gpu_resources(),
+            ],
         );
 
         self.compute_pipeline

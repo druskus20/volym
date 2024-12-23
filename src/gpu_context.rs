@@ -28,16 +28,7 @@ impl<'a> Context<'a> {
             .unwrap();
 
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    required_limits: wgpu::Limits {
-                        max_bind_groups: 6,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor::default(), None)
             .await
             .unwrap();
 
