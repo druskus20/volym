@@ -34,10 +34,22 @@ impl GpuVolume {
     #[tracing::instrument(skip(ctx))]
     pub fn init(path: &Path, flip_mode: FlipMode, ctx: &Context) -> Result<Self> {
         info!("Loading volume");
+
         let data = {
             let mut data = std::fs::read(path)?;
+            // center the volume to be 256x256x256
+            let desired_len = 256 * 256 * 256;
+
+            if data.len() < desired_len {
+                info!("Volume's size is less than 256x256x256, padding with zeros");
+                data.resize(desired_len, 0);
+            } else {
+                info!("Volume's size is greater than 256x256x256, truncating");
+                data.truncate(desired_len);
+            }
+
             if flip_mode == FlipMode::Y {
-                flip_y(&mut data, 256, 256, 256);
+                flip_y(&mut data, (256, 256, 256));
             }
             data
         };
@@ -47,6 +59,7 @@ impl GpuVolume {
             height: 256,
             depth_or_array_layers: 256,
         };
+
         let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Volume Texture"),
             size,
@@ -91,14 +104,14 @@ impl ToGpuResources for GpuVolume {
     }
 }
 
-fn flip_y(data: &mut [u8], width: usize, height: usize, depth: usize) {
-    for z in 0..depth {
-        for y in 0..(height / 2) {
-            let top_row = y * width;
-            let bottom_row = (height - y - 1) * width;
-            for x in 0..width {
-                let top_index = z * width * height + top_row + x;
-                let bottom_index = z * width * height + bottom_row + x;
+fn flip_y(data: &mut [u8], (x, y, z): (usize, usize, usize)) {
+    for k in 0..z {
+        for j in 0..(y / 2) {
+            let top_row = j * x;
+            let bottom_row = (y - j - 1) * x;
+            for i in 0..x {
+                let top_index = k * x * y + top_row + i;
+                let bottom_index = k * x * y + bottom_row + i;
                 data.swap(top_index, bottom_index);
             }
         }

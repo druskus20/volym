@@ -30,6 +30,7 @@ pub trait ToGpuResources {
     fn to_gpu_resources(&self) -> Vec<wgpu::BindingResource>;
 }
 
+// TODO: there are definitely better names and better ways to do this.
 pub trait ToBindGroupEntries: Sized {
     fn to_bind_group_entries(&self) -> Vec<wgpu::BindGroupEntry>;
 }

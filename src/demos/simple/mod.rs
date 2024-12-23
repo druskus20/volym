@@ -3,37 +3,28 @@ use std::path::Path;
 use tracing::info;
 
 use crate::{
-    demos::pipeline::{DemoPipeline, DemoPipelineConfig},
+    demos::pipeline::{layout_from_unbound_entries, BaseDemoConfig},
     gpu_context::Context,
     gpu_resources::{
-        camera::GpuCamera,
-        debug_matrix::GpuDebugMatrix,
-        output_texture::GpuOutputTexture,
         transfer_function::GPUTransferFunction,
         volume::{FlipMode, GpuVolume},
-        BindGroupLayoutEntryUnbound, ToBindGroupEntries, ToBindGroupLayoutEntries, ToGpuResources,
+        ToGpuResources,
     },
     state::State,
     transfer_function,
 };
 
-use super::ComputeDemo;
+use super::{pipeline::bindgroup_from_resources, ComputeDemo};
 use crate::Result;
 
 #[derive(Debug)]
 pub struct Simple {
-    compute_pipeline: super::pipeline::DemoPipeline,
+    // Base demo
+    base: super::pipeline::BaseDemo,
 
     // Resources for state
-    volume: GpuVolume,
-    transfer_function: GPUTransferFunction,
-    camera: GpuCamera,
-    debug_matrix: GpuDebugMatrix,
-    output_texture: GpuOutputTexture,
-
-    // Layouts of the pipeline
-    base_inputs_layout: wgpu::BindGroupLayout,
-    base_outputs_layout: wgpu::BindGroupLayout,
+    _volume: GpuVolume,
+    _transfer_function: GPUTransferFunction,
 }
 
 impl ComputeDemo for Simple {
@@ -42,126 +33,60 @@ impl ComputeDemo for Simple {
 
         let volume_path = &(format!(
             "{}/assets/bonsai_256x256x256_uint8.raw",
+            //"{}/assets/boston_teapot_256x256x178_uint8.raw",
             env!("CARGO_MANIFEST_DIR")
         ));
         let volume = GpuVolume::init(volume_path.as_ref(), FlipMode::None, ctx)?;
         let transfer_function = transfer_function::TransferFunction::default();
-        let camera = GpuCamera::new(ctx, state);
-        let debug_matrix = GpuDebugMatrix::new(ctx, state);
-        let output_texture = GpuOutputTexture::new(ctx, state, output_texture);
-        let transfer_function =
+        let gpu_transfer_function =
             GPUTransferFunction::new_texture_1d_rgbt(&transfer_function, &ctx.device, &ctx.queue);
-
-        let base_inputs_layout = layout_from_unbound_entries(
-            ctx,
-            "Base Inputs Layout",
-            &[
-                GpuVolume::BIND_GROUP_LAYOUT_ENTRIES,
-                GpuCamera::BIND_GROUP_LAYOUT_ENTRIES,
-                GPUTransferFunction::BIND_GROUP_LAYOUT_ENTRIES,
-            ],
-        );
-
-        let base_outputs_layout = layout_from_unbound_entries(
-            ctx,
-            "Base Outputs Layout",
-            &[
-                GpuOutputTexture::BIND_GROUP_LAYOUT_ENTRIES,
-                GpuDebugMatrix::BIND_GROUP_LAYOUT_ENTRIES,
-            ],
-        );
 
         let shader_path =
             Path::new(&(format!("{}/shaders/simple_compute.wgsl", env!("CARGO_MANIFEST_DIR"))))
                 .to_path_buf();
-        let compute_pipeline = DemoPipeline::with_config(
-            ctx,
-            &DemoPipelineConfig {
-                shader_path,
-                bind_group_layouts: &[&base_inputs_layout, &base_outputs_layout],
-            },
-        )?;
 
-        Ok(Simple {
-            volume,
-            compute_pipeline,
-            transfer_function,
-            camera,
-            debug_matrix,
+        let extra_layout = layout_from_unbound_entries(
+            ctx,
+            "Extra Layout",
+            &[
+                GpuVolume::BIND_GROUP_LAYOUT_ENTRIES,
+                GPUTransferFunction::BIND_GROUP_LAYOUT_ENTRIES,
+            ],
+        );
+        let extra_bind_groups = bindgroup_from_resources(
+            ctx,
+            "Extra Bind Group",
+            &extra_layout,
+            &[
+                volume.to_gpu_resources(),
+                gpu_transfer_function.to_gpu_resources(),
+            ],
+        );
+
+        let config = BaseDemoConfig {
+            shader_path,
             output_texture,
-            base_inputs_layout,
-            base_outputs_layout,
+            extra_bind_groups: vec![extra_bind_groups],
+            extra_layouts: vec![extra_layout],
+        };
+
+        let base = super::pipeline::BaseDemo::init(ctx, state, config)?;
+
+        Ok(Self {
+            base,
+            _volume: volume,
+            _transfer_function: gpu_transfer_function,
         })
     }
 
     fn update_gpu_state(&self, ctx: &Context, state: &State) -> Result<()> {
-        self.camera.update(ctx, state)?;
+        self.base.update_gpu_state(ctx, state)?;
         Ok(())
     }
 
     fn compute_pass(&self, ctx: &Context) -> Result<()> {
-        let base_inputs_group = bindgroup_from_resources(
-            ctx,
-            "Base Inputs Bind Group",
-            &self.base_inputs_layout,
-            &[
-                self.volume.to_gpu_resources(),
-                self.camera.to_gpu_resources(),
-                self.transfer_function.to_gpu_resources(),
-            ],
-        );
-
-        let base_outputs_group = bindgroup_from_resources(
-            ctx,
-            "Base Outputs Bind Group",
-            &self.base_outputs_layout,
-            &[
-                self.output_texture.to_gpu_resources(),
-                self.debug_matrix.to_gpu_resources(),
-            ],
-        );
-
-        self.compute_pipeline
-            .compute_pass(ctx, &[&base_inputs_group, &base_outputs_group]);
+        self.base.compute_pass(ctx)?;
 
         Ok(())
     }
-}
-
-fn layout_from_unbound_entries(
-    ctx: &Context,
-    label: &str,
-    base_inputs: &[&[BindGroupLayoutEntryUnbound]],
-) -> wgpu::BindGroupLayout {
-    let flat_base_inputs = base_inputs
-        .iter()
-        .flat_map(|x| x.iter())
-        .collect::<Vec<&BindGroupLayoutEntryUnbound>>();
-
-    ctx.device
-        .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some(label),
-            entries: flat_base_inputs.to_bind_group_layout_entries().as_slice(),
-        })
-}
-
-fn bindgroup_from_resources(
-    ctx: &Context,
-    label: &str,
-    base_inputs_layout: &wgpu::BindGroupLayout,
-    base_inputs_resources: &[Vec<wgpu::BindingResource>],
-) -> wgpu::BindGroup {
-    let flat_base_inputs_resources: Vec<wgpu::BindingResource> = base_inputs_resources
-        .iter()
-        .flat_map(|x| x.iter())
-        .cloned()
-        .collect();
-
-    ctx.device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some(label),
-        layout: base_inputs_layout,
-        entries: flat_base_inputs_resources
-            .to_bind_group_entries()
-            .as_slice(),
-    })
 }
