@@ -1,3 +1,5 @@
+const USE_IMPORTANCE_COLORING = true;
+
 struct CameraUniforms {
     view_matrix: mat4x4<f32>,
     projection_matrix: mat4x4<f32>,
@@ -23,7 +25,26 @@ var volume_sampler: sampler;
 var transfer_function_texture: texture_1d<f32>;
 @group(2) @binding(3)
 var transfer_function_sampler: sampler;
+@group(2) @binding(4)
+var importances_texture: texture_3d<f32>;
+@group(2) @binding(5)
+var importances_sampler: sampler;
 
+// Add a function to get color based on importance value
+fn get_importance_color(importance: f32) -> vec4<f32> {
+    // Assuming importance texture contains segment IDs (0-4)
+    if importance == 0.0 {  // Segment 0 (largest)
+        return vec4<f32>(0.2, 0.5, 0.9, 0.1);  // Blue
+    } else if importance == 1.0 {  // Segment 1
+        return vec4<f32>(0.9, 0.2, 0.2, 0.1);  // Red
+    } else if importance == 2.0 {  // Segment 2
+        return vec4<f32>(0.2, 0.9, 0.2, 0.1);  // Green
+    } else if importance == 3.0 {  // Segment 3
+        return vec4<f32>(0.9, 0.7, 0.2, 0.1);  // Yellow
+    } else {  // Segment 4
+        return vec4<f32>(0.9, 0.4, 0.9, 0.1);  // Purple
+    }
+}
 
 fn ray_box_intersection(ray_origin: vec3<f32>, ray_direction: vec3<f32>) -> vec2<f32> {
     let box_min = vec3<f32>(0.0);
@@ -121,37 +142,61 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             0.0
         ).r;
 
-    // Filter out low density noise
-        if density < 0.12 { // Adjust this threshold value to find the right balance
+        // Filter out low density noise
+        if density < 0.12 {
             current_distance += step_size;
             continue;
         }
 
-        // Sample transfer function
-        let transfer_color = textureSampleLevel(
-            transfer_function_texture,
-            transfer_function_sampler,
-            density,
-            0.0
-        );
-
-        // Only process non-zero opacity samples
-        if transfer_color.a > 0.0 {
-            let shaded_color = blinn_phong_shade(
+        if USE_IMPORTANCE_COLORING {
+            let importance = textureSampleLevel(
+                importances_texture,
+                importances_sampler,
                 current_pos,
-                transfer_color.rgb,
-                volume_texture,
-                volume_sampler
+                0.0
+            ).r;
+
+            let segment_color = get_importance_color(importance);
+            var final_color = segment_color;
+
+            if segment_color.a > 0.0 {
+                let shaded_color = blinn_phong_shade(
+                    current_pos,
+                    segment_color.rgb,
+                    volume_texture,
+                    volume_sampler
+                );
+
+                let alpha = 1.0 - pow(1.0 - segment_color.a, step_size * 100.0);
+                let opacity_contrib = (1.0 - accumulated_alpha) * alpha;
+
+                accumulated_color += shaded_color * opacity_contrib;
+                accumulated_alpha += opacity_contrib;
+            }
+        } else {
+
+            let transfer_color = textureSampleLevel(
+                transfer_function_texture,
+                transfer_function_sampler,
+                density,
+                0.0
             );
-            
-            // Opacity correction based on step size
-            let alpha = 1.0 - pow(1.0 - transfer_color.a, step_size * 100.0);
-            let opacity_contrib = (1.0 - accumulated_alpha) * alpha;
 
-            accumulated_color += shaded_color * opacity_contrib;
-            accumulated_alpha += opacity_contrib;
+            if transfer_color.a > 0.0 {
+                let shaded_color = blinn_phong_shade(
+                    current_pos,
+                    transfer_color.rgb,
+                    volume_texture,
+                    volume_sampler
+                );
+
+                let alpha = 1.0 - pow(1.0 - transfer_color.a, step_size * 100.0);
+                let opacity_contrib = (1.0 - accumulated_alpha) * alpha;
+
+                accumulated_color += shaded_color * opacity_contrib;
+                accumulated_alpha += opacity_contrib;
+            }
         }
-
         current_distance += step_size;
     }
 
@@ -160,3 +205,5 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     textureStore(debug_texture, vec2<u32>(global_id.x, global_id.y),
         vec4<f32>(ray_direction, 1.0));
 }
+
+
