@@ -10,7 +10,7 @@ use crate::{
         camera::GpuCamera,
         debug_matrix::GpuDebugMatrix,
         output_texture::GpuOutputTexture,
-        tf::GPUTransferFunction,
+        transfer_function::GPUTransferFunction,
         volume::{FlipMode, GpuVolume},
         BindGroupLayoutEntryUnbound, ToBindGroupEntries, ToBindGroupLayoutEntries, ToGpuResources,
     },

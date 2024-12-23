@@ -5,7 +5,7 @@ use wgpu::{BindingType, ShaderStages};
 pub mod camera;
 pub mod debug_matrix;
 pub mod output_texture;
-pub mod tf;
+pub mod transfer_function;
 pub mod volume;
 
 /// WGPU's BindGroupEntries and BindGroupLayoutEntry's force you to hardcode the binding index
