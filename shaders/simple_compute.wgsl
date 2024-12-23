@@ -1,10 +1,3 @@
-@group(0) @binding(0)
-var volume_texture: texture_3d<f32>;
-@group(0) @binding(1)
-var volume_sampler: sampler;
-@group(1) @binding(0)
-var output_texture: texture_storage_2d<rgba8unorm, write>;
-
 struct CameraUniforms {
     view_matrix: mat4x4<f32>,
     projection_matrix: mat4x4<f32>,
@@ -12,16 +5,23 @@ struct CameraUniforms {
     camera_position: vec3<f32>,
 }
 
-@group(2) @binding(0)
+@group(0) @binding(0)
+var volume_texture: texture_3d<f32>;
+@group(0) @binding(1)
+var volume_sampler: sampler;
+@group(0) @binding(2)
 var<uniform> camera: CameraUniforms;
+@group(0) @binding(3)
+var transfer_function_texture: texture_1d<f32>;
+@group(0) @binding(4)
+var transfer_function_sampler: sampler;
 
-@group(3) @binding(0)
+
+@group(1) @binding(0)
+var output_texture: texture_storage_2d<rgba8unorm, write>;
+@group(1) @binding(1)
 var debug_texture: texture_storage_2d<rgba8unorm, write>;
 
-@group(4) @binding(0)
-var transfer_function_texture: texture_1d<f32>;
-@group(4) @binding(1)
-var transfer_function_sampler: sampler;
 
 fn ray_box_intersection(ray_origin: vec3<f32>, ray_direction: vec3<f32>) -> vec2<f32> {
     let box_min = vec3<f32>(0.0);
@@ -104,7 +104,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    let step_size = 0.01;
+    let step_size = 0.005;
     var accumulated_color = vec3<f32>(0.0);
     var accumulated_alpha = 0.0;
 

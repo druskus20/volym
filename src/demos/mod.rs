@@ -1,8 +1,8 @@
-use crate::rendering_context::Context;
+use crate::gpu_context::Context;
 use crate::state::State;
 use crate::Result;
 
-pub mod compute_base;
+pub mod pipeline;
 pub mod simple;
 
 pub trait ComputeDemo: Sized {
