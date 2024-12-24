@@ -1,14 +1,13 @@
 use std::path::Path;
 
+use importance::GpuImportances;
 use tracing::info;
 
 use crate::{
     demos::pipeline::{layout_from_unbound_entries, BaseDemoConfig},
     gpu_context::Context,
     gpu_resources::{
-        transfer_function::GPUTransferFunction,
-        volume::{FlipMode, GpuVolume},
-        ToGpuResources,
+        transfer_function::GPUTransferFunction, volume::GpuVolume, FlipMode, ToGpuResources,
     },
     state::State,
     transfer_function::TransferFunction,
@@ -19,6 +18,8 @@ use super::{
     pipeline::{bindgroup_from_resources, BaseDemo},
     ComputeDemo,
 };
+
+mod importance;
 
 #[derive(Debug)]
 pub struct Simple {
@@ -42,6 +43,12 @@ impl ComputeDemo for Simple {
         ));
         let volume = GpuVolume::init(volume_path.as_ref(), FlipMode::Y, ctx)?;
 
+        let importances_path = &(format!(
+            "{}/assets/boston_teapot_256x256x178_uint8_importances.raw",
+            env!("CARGO_MANIFEST_DIR")
+        ));
+        let importances = GpuImportances::init(importances_path.as_ref(), FlipMode::Y, ctx)?;
+
         // TF
         let transfer_function = TransferFunction::default();
         let gpu_transfer_function =
@@ -57,6 +64,7 @@ impl ComputeDemo for Simple {
             &[
                 GpuVolume::BIND_GROUP_LAYOUT_ENTRIES,
                 GPUTransferFunction::BIND_GROUP_LAYOUT_ENTRIES,
+                GpuImportances::BIND_GROUP_LAYOUT_ENTRIES,
             ],
         );
         let extra_bind_group = bindgroup_from_resources(
@@ -66,6 +74,7 @@ impl ComputeDemo for Simple {
             &[
                 volume.to_gpu_resources(),
                 gpu_transfer_function.to_gpu_resources(),
+                importances.to_gpu_resources(),
             ],
         );
 
