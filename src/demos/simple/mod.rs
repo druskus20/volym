@@ -43,11 +43,21 @@ impl ComputeDemo for Simple {
         ));
         let volume = GpuVolume::init(volume_path.as_ref(), FlipMode::Y, ctx)?;
 
-        let importances_path = &(format!(
-            "{}/assets/boston_teapot_256x256x178_uint8_importances.raw",
+        let segments_info_path = &(format!(
+            "{}/assets/boston_teapot_256x256x178_uint8_segments.json",
             env!("CARGO_MANIFEST_DIR")
         ));
-        let importances = GpuImportances::init(importances_path.as_ref(), FlipMode::Y, ctx)?;
+
+        let importances_path = &(format!(
+            "{}/assets/boston_teapot_256x256x178_uint8_segments.raw",
+            env!("CARGO_MANIFEST_DIR")
+        ));
+        let importances = GpuImportances::init(
+            importances_path.as_ref(),
+            segments_info_path.as_ref(),
+            FlipMode::Y,
+            ctx,
+        )?;
 
         // TF
         let transfer_function = TransferFunction::default();
@@ -55,9 +65,13 @@ impl ComputeDemo for Simple {
             GPUTransferFunction::new_texture_1d_rgbt(&transfer_function, &ctx.device, &ctx.queue);
 
         // Shader
-        let shader_path =
-            Path::new(&(format!("{}/shaders/simple_compute.wgsl", env!("CARGO_MANIFEST_DIR"))))
-                .to_path_buf();
+        let shader_path = Path::new(
+            &(format!(
+                "{}/shaders/importance_driven_volume_rendering.wgsl",
+                env!("CARGO_MANIFEST_DIR")
+            )),
+        )
+        .to_path_buf();
         let extra_layout = layout_from_unbound_entries(
             ctx,
             "Extra Layout",

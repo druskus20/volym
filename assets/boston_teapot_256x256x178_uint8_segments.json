@@ -1,0 +1,23 @@
+[
+  {
+    "id": "Segment_4",
+    "importance": 0,
+    "index": 1,
+    "label_value": 3,
+    "name": "Cup"
+  },
+  {
+    "id": "Segment_5",
+    "importance": 0,
+    "index": 2,
+    "label_value": 4,
+    "name": "Ground"
+  },
+  {
+    "id": "Segment_2",
+    "importance": 255,
+    "index": 0,
+    "label_value": 2,
+    "name": "Lobster"
+  }
+]
