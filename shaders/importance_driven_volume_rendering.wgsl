@@ -1,5 +1,4 @@
-const USE_IMPORTANCE_COLORING = true;
-const IMPORTANCE_THRESHOLD = 1.0;
+const USE_CONE_IMPORTANCE_CHECK = true;
 
 struct CameraUniforms {
     view_matrix: mat4x4<f32>,
@@ -80,8 +79,56 @@ fn blinn_phong_shade(
     return color;
 }
 
-// Function to check if there's an important object along the ray
-fn has_important_object_ahead(current_pos: vec3<f32>, ray_direction: vec3<f32>, max_distance: f32) -> bool {
+
+
+fn sample_cone_directions(main_direction: vec3<f32>, cone_angle: f32, sample_index: i32, total_samples: i32) -> vec3<f32> {
+    let up = vec3<f32>(0.0, 1.0, 0.0);
+    let right = normalize(cross(main_direction, up));
+    let new_up = cross(main_direction, right);
+
+    let angle = (f32(sample_index) / f32(total_samples)) * 2.0 * 3.14159;
+    let radius = cone_angle;
+
+    let x_offset = cos(angle) * radius;
+    let y_offset = sin(angle) * radius;
+
+    return normalize(main_direction + right * x_offset + new_up * y_offset);
+}
+
+fn has_important_object_ahead_cone(current_pos: vec3<f32>, main_direction: vec3<f32>, max_distance: f32) -> bool {
+    var pos = current_pos;
+    let check_steps = 20;
+    let step = (max_distance - length(current_pos)) / f32(check_steps);
+    let cone_samples = 8;
+    let cone_angle = 0.2;
+
+    for (var s = 0; s < cone_samples; s++) {
+        let sample_direction = sample_cone_directions(main_direction, cone_angle, s, cone_samples);
+        pos = current_pos;
+
+        for (var i = 0; i < check_steps; i++) {
+            pos += sample_direction * step;
+
+            if any(pos < vec3<f32>(0.0)) || any(pos > vec3<f32>(1.0)) {
+                break;
+            }
+
+            let importance = textureSampleLevel(
+                importances_texture,
+                importances_sampler,
+                pos,
+                0.0
+            ).r;
+
+            if importance >= 0.5 {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+fn has_important_object_ahead_straight(current_pos: vec3<f32>, ray_direction: vec3<f32>, max_distance: f32) -> bool {
     var pos = current_pos;
     let check_steps = 20;  // Number of steps to look ahead
     let step = (max_distance - length(current_pos)) / f32(check_steps);
@@ -95,7 +142,7 @@ fn has_important_object_ahead(current_pos: vec3<f32>, ray_direction: vec3<f32>, 
             0.0
         ).r;
 
-        if importance >= 0.5 {  // Check for important objects (importance = 1)
+        if importance >= 0.5 {
             return true;
         }
     }
@@ -147,11 +194,16 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             continue;
         }
 
-        // Check if this is a non-important object with important objects behind it
-        var should_render = true;
-        if importance < 1.0 && has_important_object_ahead(current_pos, ray_direction, intersection.y) {
+        var has_important_object_ahead = false;
+        if USE_CONE_IMPORTANCE_CHECK {
+            has_important_object_ahead = has_important_object_ahead_cone(current_pos, ray_direction, intersection.y);
+        } else {
+            has_important_object_ahead = has_important_object_ahead_straight(current_pos, ray_direction, intersection.y);
+        }
+
+        if importance < 1.0 && has_important_object_ahead {
             current_distance += step_size;
-            continue;  // Skip rendering this non-important voxel
+            continue;
         }
 
         let transfer_color = textureSampleLevel(
