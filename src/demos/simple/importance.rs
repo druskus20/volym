@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use serde::Deserialize;
 use tracing::info;
 
 use crate::{
@@ -7,6 +8,15 @@ use crate::{
     gpu_resources::{flip_3d_texture_y, BindGroupLayoutEntryUnbound, FlipMode, ToGpuResources},
     Result,
 };
+
+#[derive(Debug, Deserialize)]
+pub struct SegmentInfo {
+    pub id: String,
+    pub name: String,
+    pub index: u8,
+    pub label_value: u8,
+    pub importance: u8,
+}
 
 #[derive(Debug)]
 pub struct GpuImportances {
@@ -31,11 +41,19 @@ impl GpuImportances {
             count: None,
         },
     ];
-    pub fn init(path: &Path, flip_mode: FlipMode, ctx: &Context) -> Result<Self> {
+    pub fn init(
+        data_path: &Path,
+        info_path: &Path,
+        flip_mode: FlipMode,
+        ctx: &Context,
+    ) -> Result<Self> {
         info!("Loading Importances");
 
         let data = {
-            let mut data = std::fs::read(path)?;
+            let mut data = std::fs::read(data_path)?;
+            let info: Vec<SegmentInfo> = serde_json::from_slice(&std::fs::read(info_path)?)?;
+            let mut data = map_segments_to_importance(data, info);
+
             // center the volume to be 256x256x256
             let desired_len = 256 * 256 * 256;
 
@@ -102,6 +120,12 @@ impl GpuImportances {
 
         let sampler = ctx.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Importances Sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
 
@@ -119,4 +143,15 @@ impl ToGpuResources for GpuImportances {
             wgpu::BindingResource::Sampler(&self.sampler),
         ]
     }
+}
+fn map_segments_to_importance(data: Vec<u8>, info: Vec<SegmentInfo>) -> Vec<u8> {
+    // map each byte of data - which corresponds to label_value - to it's importance
+
+    data.into_iter()
+        .map(|label_value| {
+            info.iter()
+                .find(|segment| segment.label_value == label_value)
+                .map_or(0, |segment| segment.importance)
+        })
+        .collect()
 }
