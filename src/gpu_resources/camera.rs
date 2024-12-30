@@ -1,8 +1,9 @@
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Matrix4, SquareMatrix};
-use wgpu::util::DeviceExt;
+use egui_wgpu::wgpu;
+use egui_wgpu::wgpu::util::DeviceExt;
 
-use crate::gpu_context::Context;
+use crate::gpu_context::GpuContext;
 use crate::Result;
 use crate::{camera::Camera, state::State};
 
@@ -25,7 +26,7 @@ impl GpuCamera {
             },
             count: None,
         }];
-    pub fn new(ctx: &Context, state: &State) -> Self {
+    pub fn new(ctx: &GpuContext, state: &State) -> Self {
         let uniforms: CameraUniforms = CameraUniforms::try_from(&state.camera).unwrap();
         let camera_buffer = ctx
             .device
@@ -37,7 +38,7 @@ impl GpuCamera {
 
         Self { camera_buffer }
     }
-    pub fn update(&self, ctx: &Context, state: &State) -> Result<()> {
+    pub fn update(&self, ctx: &GpuContext, state: &State) -> Result<()> {
         let uniforms = CameraUniforms::try_from(&state.camera)?;
         ctx.queue
             .write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[uniforms]));

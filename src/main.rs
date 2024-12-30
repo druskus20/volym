@@ -1,10 +1,17 @@
 use cli::Command;
 use cli::Demo;
-use gpu_context::Context;
+use egui_wgpu::wgpu;
+use egui_winit::winit::{
+    event::*,
+    event_loop::EventLoop,
+    keyboard::{Key, NamedKey},
+    window::{Window, WindowBuilder},
+};
+
+use gpu_context::GpuContext;
 use render_pipeline::RenderPipeline;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
-use winit::{event_loop::EventLoop, window::WindowBuilder};
 
 mod camera;
 mod cli;
@@ -12,6 +19,7 @@ mod demos;
 mod event_loop;
 mod gpu_context;
 mod gpu_resources;
+mod gui_context;
 mod render_pipeline;
 mod state;
 mod transfer_function;
@@ -38,7 +46,7 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
         .build(&event_loop)?;
 
     // ctx needs to be independent to be moved into the event loop
-    let ctx = pollster::block_on(Context::new(&window))?;
+    let ctx = pollster::block_on(GpuContext::new(&window))?;
 
     // state needs to be mutable - thus separate from ctx
     let aspect = ctx.surface_config.width as f32 / ctx.surface_config.height as f32;

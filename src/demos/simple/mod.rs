@@ -1,3 +1,4 @@
+use egui_wgpu::wgpu;
 use std::path::Path;
 
 use importance::GpuImportances;
@@ -5,7 +6,7 @@ use tracing::info;
 
 use crate::{
     demos::pipeline::{layout_from_unbound_entries, BaseDemoConfig},
-    gpu_context::Context,
+    gpu_context::GpuContext,
     gpu_resources::{
         transfer_function::GPUTransferFunction, volume::GpuVolume, FlipMode, ToGpuResources,
     },
@@ -32,7 +33,7 @@ pub struct Simple {
 }
 
 impl ComputeDemo for Simple {
-    fn init(ctx: &Context, state: &State, output_texture: &wgpu::Texture) -> Result<Self> {
+    fn init(ctx: &GpuContext, state: &State, output_texture: &wgpu::Texture) -> Result<Self> {
         info!("Initializing Simple Demo");
 
         // Volume
@@ -108,12 +109,12 @@ impl ComputeDemo for Simple {
         })
     }
 
-    fn update_gpu_state(&self, ctx: &Context, state: &State) -> Result<()> {
+    fn update_gpu_state(&self, ctx: &GpuContext, state: &State) -> Result<()> {
         self.base.update_gpu_state(ctx, state)?;
         Ok(())
     }
 
-    fn compute_pass(&self, ctx: &Context) -> Result<()> {
+    fn compute_pass(&self, ctx: &GpuContext) -> Result<()> {
         self.base.compute_pass(ctx)?;
         Ok(())
     }

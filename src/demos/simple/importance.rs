@@ -1,10 +1,11 @@
+use egui_wgpu::wgpu;
 use std::path::Path;
 
 use serde::Deserialize;
 use tracing::info;
 
 use crate::{
-    gpu_context::Context,
+    gpu_context::GpuContext,
     gpu_resources::{flip_3d_texture_y, BindGroupLayoutEntryUnbound, FlipMode, ToGpuResources},
     Result,
 };
@@ -45,7 +46,7 @@ impl GpuImportances {
         data_path: &Path,
         info_path: &Path,
         flip_mode: FlipMode,
-        ctx: &Context,
+        ctx: &GpuContext,
     ) -> Result<Self> {
         info!("Loading Importances");
 

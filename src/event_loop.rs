@@ -1,20 +1,23 @@
-/// Event loop that handles window events and triggers rendering
-use std::time::{Duration, Instant};
-use tracing::{debug, error, info, warn};
-use winit::{
+use egui_winit::winit::{
     event::*,
     event_loop::EventLoop,
     keyboard::{KeyCode, PhysicalKey},
 };
+/// Event loop that handles window events and triggers rendering
+use std::time::{Duration, Instant};
+use tracing::{debug, error, info, warn};
+
+use egui_wgpu::wgpu;
 
 use crate::{
-    demos::ComputeDemo, gpu_context::Context, render_pipeline::RenderPipeline, state::State, Result,
+    demos::ComputeDemo, gpu_context::GpuContext, render_pipeline::RenderPipeline, state::State,
+    Result,
 };
 
 #[tracing::instrument(skip_all)]
 pub fn run<T: std::fmt::Debug>(
     event_loop: EventLoop<T>,
-    mut ctx: Context,
+    mut ctx: GpuContext,
     state: &mut State,
     render_pipeline: RenderPipeline,
     demo: &impl ComputeDemo,

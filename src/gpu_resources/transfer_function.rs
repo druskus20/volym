@@ -1,5 +1,7 @@
 use crate::transfer_function::TransferFunction;
 
+use egui_wgpu::wgpu;
+
 use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
 
 #[derive(Debug)]

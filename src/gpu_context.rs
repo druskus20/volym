@@ -1,10 +1,12 @@
 // lib.rs
-use winit::window::Window;
+use egui_wgpu::wgpu;
+use egui_winit::winit;
+use egui_winit::winit::window::Window;
 
 use crate::Result;
 
 #[derive(Debug)]
-pub struct Context<'a> {
+pub struct GpuContext<'a> {
     pub surface: wgpu::Surface<'a>,
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,
@@ -13,9 +15,9 @@ pub struct Context<'a> {
     pub window: &'a Window,
 }
 
-impl<'a> Context<'a> {
+impl<'a> GpuContext<'a> {
     // Creating some of the wgpu types requires async code
-    pub async fn new(window: &'a Window) -> Result<Context<'a>> {
+    pub async fn new(window: &'a Window) -> Result<GpuContext<'a>> {
         let instance = wgpu::Instance::default();
         let surface = instance.create_surface(window).unwrap();
         let adapter = instance

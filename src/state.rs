@@ -1,5 +1,5 @@
+use egui_winit::winit::event::{ElementState, MouseButton, WindowEvent};
 use tracing::debug;
-use winit::event::{ElementState, MouseButton, WindowEvent};
 
 use crate::camera::{Camera, CameraController};
 
