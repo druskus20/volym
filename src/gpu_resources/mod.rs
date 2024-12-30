@@ -1,6 +1,7 @@
 use std::num::NonZeroU32;
 
-use wgpu::{BindingType, ShaderStages};
+use egui_wgpu::wgpu;
+use egui_wgpu::wgpu::{BindingType, ShaderStages};
 
 pub mod camera;
 pub mod debug_matrix;

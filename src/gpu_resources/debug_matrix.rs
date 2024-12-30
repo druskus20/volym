@@ -1,5 +1,6 @@
-use crate::gpu_context::Context;
+use crate::gpu_context::GpuContext;
 use crate::state::State;
+use egui_wgpu::wgpu;
 
 use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
 
@@ -20,7 +21,7 @@ impl GpuDebugMatrix {
             },
             count: None,
         }];
-    pub fn new(ctx: &Context, state: &State) -> Self {
+    pub fn new(ctx: &GpuContext, state: &State) -> Self {
         let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Debug Matrix Texture"),
             size: wgpu::Extent3d {
