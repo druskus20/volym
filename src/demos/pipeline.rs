@@ -3,7 +3,9 @@ use std::path::PathBuf;
 
 use crate::{
     gpu_resources::{
-        camera::GpuCamera, debug_matrix::GpuDebugMatrix, output_texture::GpuOutputTexture,
+        camera::GpuCamera,
+        debug_matrix::GpuDebugMatrix,
+        texture::{GpuReadTexture2D, GpuWriteTexture2D},
         BindGroupLayoutEntryUnbound, ToBindGroupEntries, ToBindGroupLayoutEntries, ToGpuResources,
     },
     state::State,
@@ -74,7 +76,7 @@ impl DemoPipeline {
             compute_pass.set_pipeline(self.as_ref());
 
             for (i, bind_group) in bind_groups.iter().enumerate() {
-                compute_pass.set_bind_group(i as u32, *bind_group, &[]);
+                compute_pass.set_bind_group(i as u32, bind_group, &[]);
             }
 
             // size.width + 15 ensures that any leftover pixels (less than a full workgroup 16x16)
@@ -115,7 +117,7 @@ pub struct BaseDemo {
     // Resources for state
     camera: GpuCamera,
     pub debug_matrix: GpuDebugMatrix,
-    _output_texture: GpuOutputTexture,
+    //output_texture: GpuStoreTexture2D,
 
     // Bind groups
     base_inputs_group: wgpu::BindGroup,
@@ -126,7 +128,7 @@ pub struct BaseDemo {
 #[derive(Debug)]
 pub struct BaseDemoConfig<'a> {
     pub shader_path: PathBuf,
-    pub output_texture: &'a wgpu::Texture,
+    pub output_texture: &'a GpuWriteTexture2D,
     pub extra_bind_groups: Vec<wgpu::BindGroup>,
     pub extra_layouts: Vec<BindGroupLayout>,
 }
@@ -137,7 +139,6 @@ impl BaseDemo {
 
         let camera = GpuCamera::new(ctx, state);
         let debug_matrix = GpuDebugMatrix::new(ctx, state);
-        let output_texture = GpuOutputTexture::new(ctx, state, config.output_texture);
 
         let base_inputs_layout = layout_from_unbound_entries(
             ctx,
@@ -153,7 +154,7 @@ impl BaseDemo {
             ctx,
             "Base Outputs Layout",
             &[
-                GpuOutputTexture::BIND_GROUP_LAYOUT_ENTRIES,
+                GpuWriteTexture2D::BIND_GROUP_LAYOUT_ENTRIES,
                 GpuDebugMatrix::BIND_GROUP_LAYOUT_ENTRIES,
             ],
         );
@@ -185,7 +186,7 @@ impl BaseDemo {
             "Base Outputs Bind Group",
             &base_outputs_layout,
             &[
-                output_texture.to_gpu_resources(),
+                config.output_texture.to_gpu_resources(),
                 debug_matrix.to_gpu_resources(),
             ],
         );
@@ -195,8 +196,8 @@ impl BaseDemo {
         Ok(Self {
             compute_pipeline,
             camera,
-            debug_matrix: debug_matrix,
-            _output_texture: output_texture,
+            debug_matrix,
+            //output_texture: config.output_texture,
             base_inputs_group,
             base_outputs_group,
             extra_bind_groups,

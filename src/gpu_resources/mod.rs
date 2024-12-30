@@ -5,7 +5,7 @@ use egui_wgpu::wgpu::{BindingType, ShaderStages};
 
 pub mod camera;
 pub mod debug_matrix;
-pub mod output_texture;
+pub mod texture;
 pub mod transfer_function;
 pub mod volume;
 

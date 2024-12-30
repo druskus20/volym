@@ -9,20 +9,20 @@ use egui_winit::winit::event::WindowEvent;
 use egui_winit::winit::window::Window;
 use egui_winit::State;
 
-pub struct EguiRenderer {
+pub struct EguiContext {
     pub context: Context,
     state: State,
     renderer: Renderer,
 }
 
-impl EguiRenderer {
+impl EguiContext {
     pub fn new(
         device: &Device,
         output_color_format: TextureFormat,
         output_depth_format: Option<TextureFormat>,
         msaa_samples: u32,
         window: &Window,
-    ) -> EguiRenderer {
+    ) -> EguiContext {
         let egui_context = Context::default();
         let id = egui_context.viewport_id();
 
@@ -47,7 +47,7 @@ impl EguiRenderer {
             msaa_samples,
         );
 
-        EguiRenderer {
+        EguiContext {
             context: egui_context,
             state: egui_state,
             renderer: egui_renderer,
@@ -57,7 +57,6 @@ impl EguiRenderer {
     pub fn handle_input(&mut self, window: &Window, event: &WindowEvent) {
         let _ = self.state.on_window_event(window, event);
     }
-    /*
     pub fn draw(
         &mut self,
         device: &Device,
@@ -106,5 +105,4 @@ impl EguiRenderer {
             self.renderer.free_texture(x)
         }
     }
-    */
 }

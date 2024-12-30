@@ -8,7 +8,8 @@ use crate::{
     demos::pipeline::{layout_from_unbound_entries, BaseDemoConfig},
     gpu_context::GpuContext,
     gpu_resources::{
-        transfer_function::GPUTransferFunction, volume::GpuVolume, FlipMode, ToGpuResources,
+        texture::GpuWriteTexture2D, transfer_function::GPUTransferFunction, volume::GpuVolume,
+        FlipMode, ToGpuResources,
     },
     state::State,
     transfer_function::TransferFunction,
@@ -33,7 +34,7 @@ pub struct Simple {
 }
 
 impl ComputeDemo for Simple {
-    fn init(ctx: &GpuContext, state: &State, output_texture: &wgpu::Texture) -> Result<Self> {
+    fn init(ctx: &GpuContext, state: &State, output_texture: &GpuWriteTexture2D) -> Result<Self> {
         info!("Initializing Simple Demo");
 
         // Volume

@@ -9,6 +9,7 @@ use egui_winit::winit::{
 };
 
 use gpu_context::GpuContext;
+use gpu_resources::texture::GpuReadTexture2D;
 use render_pipeline::RenderPipeline;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
@@ -53,10 +54,27 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     let mut state = state::State::new(aspect);
 
     // Setup render pipeline and compute demo.
-    let render_pipeline = RenderPipeline::init(&ctx.device, &ctx.surface_config)?;
-    let compute_demo = ComputeDemo::init(&ctx, &state, &render_pipeline.input_texture)?;
+    let render_input_texture = GpuReadTexture2D::new(&ctx);
+    let render_pipeline = RenderPipeline::init(&ctx, &render_input_texture)?;
+    let compute_output_texture = render_input_texture.into_write_texture_2d();
+    let compute_demo = ComputeDemo::init(&ctx, &state, &compute_output_texture)?;
 
-    event_loop::run(event_loop, ctx, &mut state, render_pipeline, &compute_demo)?;
+    let mut egui = gui_context::EguiContext::new(
+        &ctx.device,               // wgpu Device
+        ctx.surface_config.format, // TextureFormat
+        None,                      // this can be None
+        1,                         // samples
+        &window,                   // winit Window
+    );
+
+    event_loop::run(
+        event_loop,
+        ctx,
+        &mut state,
+        render_pipeline,
+        &compute_demo,
+        &mut egui,
+    )?;
 
     Ok(())
 }
