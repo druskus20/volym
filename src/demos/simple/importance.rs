@@ -51,7 +51,7 @@ impl GpuImportances {
         info!("Loading Importances");
 
         let data = {
-            let mut data = std::fs::read(data_path)?;
+            let data = std::fs::read(data_path)?;
             let info: Vec<SegmentInfo> = serde_json::from_slice(&std::fs::read(info_path)?)?;
             let mut data = map_segments_to_importance(data, info);
 

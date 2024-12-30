@@ -1,9 +1,9 @@
 // Render the input texture to the screen
 
 @group(0) @binding(0)
-var input_sampler: sampler;
-@group(0) @binding(1)
 var input_texture: texture_2d<f32>;
+@group(0) @binding(1)
+var input_sampler: sampler;
 
 @vertex
 fn vs_main(@builtin(vertex_index) vertex_index: u32) -> @builtin(position) vec4<f32> {

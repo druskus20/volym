@@ -9,20 +9,20 @@ use egui_winit::winit::event::WindowEvent;
 use egui_winit::winit::window::Window;
 use egui_winit::State;
 
-pub struct EguiRenderer {
+pub struct EguiContext {
     pub context: Context,
     state: State,
     renderer: Renderer,
 }
 
-impl EguiRenderer {
+impl EguiContext {
     pub fn new(
         device: &Device,
         output_color_format: TextureFormat,
         output_depth_format: Option<TextureFormat>,
         msaa_samples: u32,
         window: &Window,
-    ) -> EguiRenderer {
+    ) -> EguiContext {
         let egui_context = Context::default();
         let id = egui_context.viewport_id();
 
@@ -47,7 +47,7 @@ impl EguiRenderer {
             msaa_samples,
         );
 
-        EguiRenderer {
+        EguiContext {
             context: egui_context,
             state: egui_state,
             renderer: egui_renderer,
@@ -57,7 +57,7 @@ impl EguiRenderer {
     pub fn handle_input(&mut self, window: &Window, event: &WindowEvent) {
         let _ = self.state.on_window_event(window, event);
     }
-    /*
+
     pub fn draw(
         &mut self,
         device: &Device,
@@ -69,26 +69,26 @@ impl EguiRenderer {
         run_ui: impl FnOnce(&Context),
     ) {
         // self.state.set_pixels_per_point(window.scale_factor() as f32);
-        let raw_input = self.state.take_egui_input(&window);
+        let raw_input = self.state.take_egui_input(window);
         let full_output = self.context.run(raw_input, |ui| {
             run_ui(&self.context);
         });
 
         self.state
-            .handle_platform_output(&window, full_output.platform_output);
+            .handle_platform_output(window, full_output.platform_output);
 
         let tris = self
             .context
             .tessellate(full_output.shapes, full_output.pixels_per_point);
         for (id, image_delta) in &full_output.textures_delta.set {
             self.renderer
-                .update_texture(&device, &queue, *id, &image_delta);
+                .update_texture(device, queue, *id, image_delta);
         }
         self.renderer
-            .update_buffers(&device, &queue, encoder, &tris, &screen_descriptor);
+            .update_buffers(device, queue, encoder, &tris, &screen_descriptor);
         let mut rpass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &window_surface_view,
+                view: window_surface_view,
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Load,
@@ -106,5 +106,4 @@ impl EguiRenderer {
             self.renderer.free_texture(x)
         }
     }
-    */
 }

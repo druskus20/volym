@@ -1,3 +1,4 @@
+use egui::{Align2, Context};
 use egui_winit::winit::{
     event::*,
     event_loop::EventLoop,
@@ -7,11 +8,11 @@ use egui_winit::winit::{
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
 
-use egui_wgpu::wgpu;
+use egui_wgpu::{wgpu, ScreenDescriptor};
 
 use crate::{
-    demos::ComputeDemo, gpu_context::GpuContext, render_pipeline::RenderPipeline, state::State,
-    Result,
+    demos::ComputeDemo, gpu_context::GpuContext, gui_context::EguiContext,
+    render_pipeline::RenderPipeline, state::State, Result,
 };
 
 #[tracing::instrument(skip_all)]
@@ -21,6 +22,7 @@ pub fn run<T: std::fmt::Debug>(
     state: &mut State,
     render_pipeline: RenderPipeline,
     demo: &impl ComputeDemo,
+    egui: &mut EguiContext,
 ) -> Result<()> {
     let mut last_update = Instant::now();
     let mut frame_count = 0;
@@ -59,8 +61,62 @@ pub fn run<T: std::fmt::Debug>(
 
                             //  compute and render
                             let render_result = {
-                                demo.compute_pass(&ctx).unwrap();
-                                render_pipeline.render_pass(&ctx)
+                                let mut encoder = ctx.device.create_command_encoder(
+                                    &wgpu::CommandEncoderDescriptor {
+                                        label: Some("Render Encoder"),
+                                    },
+                                );
+                                let screen_descriptor = ScreenDescriptor {
+                                    size_in_pixels: [
+                                        ctx.surface_config.width,
+                                        ctx.surface_config.height,
+                                    ],
+                                    pixels_per_point: ctx.window().scale_factor() as f32,
+                                };
+
+                                pub fn GUI(ui: &Context) {
+                                    egui::Window::new("Streamline CFD")
+                                        // .vscroll(true)
+                                        .default_open(true)
+                                        .max_width(1000.0)
+                                        .max_height(800.0)
+                                        .default_width(800.0)
+                                        .resizable(false)
+                                        .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
+                                        .show(ui, |ui| {
+                                            if ui.add(egui::Button::new("Click me")).clicked() {
+                                                println!("PRESSED")
+                                            }
+
+                                            ui.label("Slider");
+                                            ui.end_row();
+                                        });
+                                }
+                                let output = ctx.surface.get_current_texture().unwrap();
+                                let view = output
+                                    .texture
+                                    .create_view(&wgpu::TextureViewDescriptor::default());
+
+                                egui.draw(
+                                    &ctx.device,
+                                    &ctx.queue,
+                                    &mut encoder,
+                                    ctx.window,
+                                    &view,
+                                    screen_descriptor,
+                                    GUI,
+                                );
+
+                                //demo.compute_pass(&ctx).unwrap();
+                                //let r = render_pipeline.render_pass(&ctx, &view);
+                                let r = Ok(());
+                                // Before presenting to the screen we need to let the compositor know - This effectively
+                                // syncs us to the monitor refresh rate.
+                                // https://docs.rs/winit/latest/winit/window/struct.Window.html#platform-specific-2
+                                ctx.window.pre_present_notify();
+
+                                output.present();
+                                r
                             };
 
                             match render_result {

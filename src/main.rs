@@ -1,14 +1,8 @@
 use cli::Command;
 use cli::Demo;
-use egui_wgpu::wgpu;
-use egui_winit::winit::{
-    event::*,
-    event_loop::EventLoop,
-    keyboard::{Key, NamedKey},
-    window::{Window, WindowBuilder},
-};
-
+use egui_winit::winit::{event_loop::EventLoop, window::WindowBuilder};
 use gpu_context::GpuContext;
+use gpu_resources::texture::GpuWriteTexture2D;
 use render_pipeline::RenderPipeline;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
@@ -49,14 +43,32 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     let ctx = pollster::block_on(GpuContext::new(&window))?;
 
     // state needs to be mutable - thus separate from ctx
-    let aspect = ctx.surface_config.width as f32 / ctx.surface_config.height as f32;
-    let mut state = state::State::new(aspect);
+    let mut state =
+        state::State::new((ctx.surface_config.width / ctx.surface_config.height) as f32);
 
     // Setup render pipeline and compute demo.
-    let render_pipeline = RenderPipeline::init(&ctx.device, &ctx.surface_config)?;
-    let compute_demo = ComputeDemo::init(&ctx, &state, &render_pipeline.input_texture)?;
+    let compute_output_texture = GpuWriteTexture2D::new(&ctx);
+    let compute_demo = ComputeDemo::init(&ctx, &state, &compute_output_texture)?;
 
-    event_loop::run(event_loop, ctx, &mut state, render_pipeline, &compute_demo)?;
+    let render_input_texture = compute_output_texture.into_write_texture_2d(&ctx);
+    let render_pipeline = RenderPipeline::init(&ctx, &render_input_texture)?;
+
+    let mut egui = gui_context::EguiContext::new(
+        &ctx.device,               // wgpu Device
+        ctx.surface_config.format, // TextureFormat
+        None,                      // this can be None
+        1,                         // samples
+        &window,                   // winit Window
+    );
+
+    event_loop::run(
+        event_loop,
+        ctx,
+        &mut state,
+        render_pipeline,
+        &compute_demo,
+        &mut egui,
+    )?;
 
     Ok(())
 }
