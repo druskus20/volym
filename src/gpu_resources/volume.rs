@@ -1,11 +1,11 @@
 use tracing::info;
 
-use crate::Result;
+use crate::{gpu_resources::flip_3d_texture_y, Result};
 use std::path::Path;
 
 use crate::gpu_context::Context;
 
-use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
+use super::{BindGroupLayoutEntryUnbound, FlipMode, ToGpuResources};
 
 #[derive(Debug)]
 pub struct GpuVolume {
@@ -31,7 +31,6 @@ impl GpuVolume {
         },
     ];
 
-    #[tracing::instrument(skip(ctx))]
     pub fn init(path: &Path, flip_mode: FlipMode, ctx: &Context) -> Result<Self> {
         info!("Loading volume");
 
@@ -41,15 +40,21 @@ impl GpuVolume {
             let desired_len = 256 * 256 * 256;
 
             if data.len() < desired_len {
-                info!("Volume's size is less than 256x256x256, padding with zeros");
+                info!(
+                    "Volume's size is {}, which is less than 256x256x256, padding with zeros",
+                    data.len()
+                );
                 data.resize(desired_len, 0);
             } else {
-                info!("Volume's size is greater than 256x256x256, truncating");
+                info!(
+                    "Volume's size is {}, which is greater than 256x256x256, truncating",
+                    data.len()
+                );
                 data.truncate(desired_len);
             }
 
             if flip_mode == FlipMode::Y {
-                flip_y(&mut data, (256, 256, 256));
+                flip_3d_texture_y(&mut data, (256, 256, 256));
             }
             data
         };
@@ -88,7 +93,7 @@ impl GpuVolume {
             ..Default::default()
         });
 
-        Ok(GpuVolume {
+        Ok(Self {
             texture_view,
             sampler,
         })
@@ -102,24 +107,4 @@ impl ToGpuResources for GpuVolume {
             wgpu::BindingResource::Sampler(&self.sampler),
         ]
     }
-}
-
-fn flip_y(data: &mut [u8], (x, y, z): (usize, usize, usize)) {
-    for k in 0..z {
-        for j in 0..(y / 2) {
-            let top_row = j * x;
-            let bottom_row = (y - j - 1) * x;
-            for i in 0..x {
-                let top_index = k * x * y + top_row + i;
-                let bottom_index = k * x * y + bottom_row + i;
-                data.swap(top_index, bottom_index);
-            }
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum FlipMode {
-    None,
-    Y,
 }

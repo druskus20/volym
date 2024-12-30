@@ -1,14 +1,13 @@
 use std::path::Path;
 
+use importance::GpuImportances;
 use tracing::info;
 
 use crate::{
     demos::pipeline::{layout_from_unbound_entries, BaseDemoConfig},
     gpu_context::Context,
     gpu_resources::{
-        transfer_function::GPUTransferFunction,
-        volume::{FlipMode, GpuVolume},
-        ToGpuResources,
+        transfer_function::GPUTransferFunction, volume::GpuVolume, FlipMode, ToGpuResources,
     },
     state::State,
     transfer_function::TransferFunction,
@@ -19,6 +18,8 @@ use super::{
     pipeline::{bindgroup_from_resources, BaseDemo},
     ComputeDemo,
 };
+
+mod importance;
 
 #[derive(Debug)]
 pub struct Simple {
@@ -42,21 +43,42 @@ impl ComputeDemo for Simple {
         ));
         let volume = GpuVolume::init(volume_path.as_ref(), FlipMode::Y, ctx)?;
 
+        let segments_info_path = &(format!(
+            "{}/assets/boston_teapot_256x256x178_uint8_segments.json",
+            env!("CARGO_MANIFEST_DIR")
+        ));
+
+        let importances_path = &(format!(
+            "{}/assets/boston_teapot_256x256x178_uint8_segments.raw",
+            env!("CARGO_MANIFEST_DIR")
+        ));
+        let importances = GpuImportances::init(
+            importances_path.as_ref(),
+            segments_info_path.as_ref(),
+            FlipMode::Y,
+            ctx,
+        )?;
+
         // TF
         let transfer_function = TransferFunction::default();
         let gpu_transfer_function =
             GPUTransferFunction::new_texture_1d_rgbt(&transfer_function, &ctx.device, &ctx.queue);
 
         // Shader
-        let shader_path =
-            Path::new(&(format!("{}/shaders/simple_compute.wgsl", env!("CARGO_MANIFEST_DIR"))))
-                .to_path_buf();
+        let shader_path = Path::new(
+            &(format!(
+                "{}/shaders/importance_driven_volume_rendering.wgsl",
+                env!("CARGO_MANIFEST_DIR")
+            )),
+        )
+        .to_path_buf();
         let extra_layout = layout_from_unbound_entries(
             ctx,
             "Extra Layout",
             &[
                 GpuVolume::BIND_GROUP_LAYOUT_ENTRIES,
                 GPUTransferFunction::BIND_GROUP_LAYOUT_ENTRIES,
+                GpuImportances::BIND_GROUP_LAYOUT_ENTRIES,
             ],
         );
         let extra_bind_group = bindgroup_from_resources(
@@ -66,6 +88,7 @@ impl ComputeDemo for Simple {
             &[
                 volume.to_gpu_resources(),
                 gpu_transfer_function.to_gpu_resources(),
+                importances.to_gpu_resources(),
             ],
         );
 

@@ -114,7 +114,7 @@ pub struct BaseDemo {
 
     // Resources for state
     camera: GpuCamera,
-    _debug_matrix: GpuDebugMatrix,
+    pub debug_matrix: GpuDebugMatrix,
     _output_texture: GpuOutputTexture,
 
     // Bind groups
@@ -195,7 +195,7 @@ impl BaseDemo {
         Ok(Self {
             compute_pipeline,
             camera,
-            _debug_matrix: debug_matrix,
+            debug_matrix: debug_matrix,
             _output_texture: output_texture,
             base_inputs_group,
             base_outputs_group,

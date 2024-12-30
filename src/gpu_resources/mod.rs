@@ -64,3 +64,23 @@ impl ToBindGroupLayoutEntries for Vec<&BindGroupLayoutEntryUnbound> {
             .collect()
     }
 }
+
+pub fn flip_3d_texture_y(data: &mut [u8], (x, y, z): (usize, usize, usize)) {
+    for k in 0..z {
+        for j in 0..(y / 2) {
+            let top_row = j * x;
+            let bottom_row = (y - j - 1) * x;
+            for i in 0..x {
+                let top_index = k * x * y + top_row + i;
+                let bottom_index = k * x * y + bottom_row + i;
+                data.swap(top_index, bottom_index);
+            }
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum FlipMode {
+    None,
+    Y,
+}
