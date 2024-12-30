@@ -1,6 +1,7 @@
 use crate::state::State;
 
-use crate::gpu_context::Context;
+use crate::gpu_context::GpuContext;
+use egui_wgpu::wgpu;
 
 use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
 
@@ -21,7 +22,7 @@ impl GpuOutputTexture {
             count: None,
         }];
 
-    pub fn new(ctx: &Context, state: &State, output_texture: &wgpu::Texture) -> Self {
+    pub fn new(ctx: &GpuContext, state: &State, output_texture: &wgpu::Texture) -> Self {
         let texture_view = output_texture.create_view(&wgpu::TextureViewDescriptor::default());
         Self { texture_view }
     }

@@ -1,9 +1,10 @@
+use egui_wgpu::wgpu;
 use tracing::info;
 
 use crate::{gpu_resources::flip_3d_texture_y, Result};
 use std::path::Path;
 
-use crate::gpu_context::Context;
+use crate::gpu_context::GpuContext;
 
 use super::{BindGroupLayoutEntryUnbound, FlipMode, ToGpuResources};
 
@@ -31,7 +32,7 @@ impl GpuVolume {
         },
     ];
 
-    pub fn init(path: &Path, flip_mode: FlipMode, ctx: &Context) -> Result<Self> {
+    pub fn init(path: &Path, flip_mode: FlipMode, ctx: &GpuContext) -> Result<Self> {
         info!("Loading volume");
 
         let data = {

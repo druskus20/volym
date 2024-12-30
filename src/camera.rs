@@ -1,5 +1,5 @@
 use cgmath::{perspective, Deg, Matrix4, Point3, Vector3};
-use winit::{dpi::PhysicalPosition, event::MouseScrollDelta};
+use egui_winit::winit::{dpi::PhysicalPosition, event::MouseScrollDelta};
 
 #[derive(Debug)]
 #[repr(C)]
@@ -23,7 +23,7 @@ impl Camera {
         let up = Vector3::new(0.0, 1.0, 0.0);
         let fovy: f32 = 90.0;
         let aspect: f32 = aspect;
-        let znear: f32 = 0.001;
+        let znear: f32 = 0.01;
         let zfar: f32 = 1000000.0;
 
         Self {

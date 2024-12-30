@@ -9,10 +9,11 @@ use crate::{
     state::State,
     Result,
 };
+use egui_wgpu::wgpu;
+use egui_wgpu::wgpu::BindGroupLayout;
 use tracing::{debug, info};
-use wgpu::BindGroupLayout;
 
-use crate::gpu_context::Context;
+use crate::gpu_context::GpuContext;
 
 #[derive(Debug)]
 pub struct DemoPipeline {
@@ -25,7 +26,7 @@ pub(crate) struct DemoPipelineConfig<'a> {
 }
 
 impl DemoPipeline {
-    pub fn with_config(ctx: &Context, config: &DemoPipelineConfig) -> Result<Self> {
+    pub fn with_config(ctx: &GpuContext, config: &DemoPipelineConfig) -> Result<Self> {
         let shader_contents = std::fs::read_to_string(&config.shader_path)?;
         let shader = ctx
             .device
@@ -50,15 +51,14 @@ impl DemoPipeline {
                 label: Some("Compute Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: Some("main"),
+                entry_point: "main",
                 compilation_options: Default::default(),
-                cache: Default::default(),
             });
 
         Ok(DemoPipeline { pipeline })
     }
 
-    pub fn compute_pass(&self, ctx: &Context, bind_groups: &[&wgpu::BindGroup]) {
+    pub fn compute_pass(&self, ctx: &GpuContext, bind_groups: &[&wgpu::BindGroup]) {
         let mut encoder = ctx
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -132,7 +132,7 @@ pub struct BaseDemoConfig<'a> {
 }
 
 impl BaseDemo {
-    pub fn init(ctx: &Context, state: &State, config: BaseDemoConfig) -> Result<Self> {
+    pub fn init(ctx: &GpuContext, state: &State, config: BaseDemoConfig) -> Result<Self> {
         info!("Initializing Simple Demo");
 
         let camera = GpuCamera::new(ctx, state);
@@ -203,12 +203,12 @@ impl BaseDemo {
         })
     }
 
-    pub fn update_gpu_state(&self, ctx: &Context, state: &State) -> Result<()> {
+    pub fn update_gpu_state(&self, ctx: &GpuContext, state: &State) -> Result<()> {
         self.camera.update(ctx, state)?;
         Ok(())
     }
 
-    pub fn compute_pass(&self, ctx: &Context) -> Result<()> {
+    pub fn compute_pass(&self, ctx: &GpuContext) -> Result<()> {
         let mut bind_groups = vec![&self.base_inputs_group, &self.base_outputs_group];
 
         for bind_group in &self.extra_bind_groups {
@@ -223,7 +223,7 @@ impl BaseDemo {
 }
 
 pub fn layout_from_unbound_entries(
-    ctx: &Context,
+    ctx: &GpuContext,
     label: &str,
     base_inputs: &[&[BindGroupLayoutEntryUnbound]],
 ) -> wgpu::BindGroupLayout {
@@ -240,7 +240,7 @@ pub fn layout_from_unbound_entries(
 }
 
 pub fn bindgroup_from_resources(
-    ctx: &Context,
+    ctx: &GpuContext,
     label: &str,
     base_inputs_layout: &wgpu::BindGroupLayout,
     base_inputs_resources: &[Vec<wgpu::BindingResource>],

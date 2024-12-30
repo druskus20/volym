@@ -3,7 +3,9 @@ use tracing::debug;
 /// Render pipeline that displays the texture on the screen
 use crate::Result;
 
-use crate::gpu_context::Context;
+use crate::gpu_context::GpuContext;
+
+use egui_wgpu::wgpu;
 
 #[derive(Debug)]
 pub struct RenderPipeline {
@@ -58,13 +60,13 @@ impl RenderPipeline {
             layout: Some(&pipeline_layout),
             vertex: wgpu::VertexState {
                 module: &shader,
-                entry_point: Some("vs_main"),
+                entry_point: &"vs_main",
                 buffers: &[],
                 compilation_options: Default::default(),
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
-                entry_point: Some("fs_main"),
+                entry_point: &"fs_main",
                 targets: &[Some(wgpu::ColorTargetState {
                     format: surface_config.format,
                     blend: Some(wgpu::BlendState::REPLACE),
@@ -79,7 +81,6 @@ impl RenderPipeline {
             depth_stencil: None,
             multisample: wgpu::MultisampleState::default(),
             multiview: None,
-            cache: None,
         });
 
         // TODO: maybe handle resizing?
@@ -131,7 +132,7 @@ impl RenderPipeline {
     }
 
     #[tracing::instrument(skip_all)]
-    pub fn render_pass(&self, ctx: &Context) -> std::result::Result<(), wgpu::SurfaceError> {
+    pub fn render_pass(&self, ctx: &GpuContext) -> std::result::Result<(), wgpu::SurfaceError> {
         let output = ctx.surface.get_current_texture()?;
         let view = output
             .texture
