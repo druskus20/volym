@@ -8,7 +8,7 @@ use crate::Result;
 
 use crate::gpu_context::GpuContext;
 
-use egui_wgpu::wgpu;
+use egui_wgpu::wgpu::{self, TextureView};
 
 #[derive(Debug)]
 pub struct RenderPipeline {
@@ -86,11 +86,11 @@ impl RenderPipeline {
     }
 
     #[tracing::instrument(skip_all)]
-    pub fn render_pass(&self, ctx: &GpuContext) -> std::result::Result<(), wgpu::SurfaceError> {
-        let output = ctx.surface.get_current_texture()?;
-        let view = output
-            .texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+    pub fn render_pass(
+        &self,
+        ctx: &GpuContext,
+        texture_view: &TextureView,
+    ) -> std::result::Result<(), wgpu::SurfaceError> {
         let mut encoder = ctx
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -104,7 +104,7 @@ impl RenderPipeline {
                 color_attachments: &[
                     // This is what @location(0) in the fragment shader targets
                     Some(wgpu::RenderPassColorAttachment {
-                        view: &view,
+                        view: texture_view,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(wgpu::Color::default()),
@@ -125,13 +125,6 @@ impl RenderPipeline {
         }
 
         ctx.queue.submit(Some(encoder.finish()));
-
-        // Before presenting to the screen we need to let the compositor know - This effectively
-        // syncs us to the monitor refresh rate.
-        // https://docs.rs/winit/latest/winit/window/struct.Window.html#platform-specific-2
-        ctx.window.pre_present_notify();
-
-        output.present();
 
         Ok(())
     }

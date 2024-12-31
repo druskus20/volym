@@ -1,5 +1,5 @@
 // lib.rs
-use egui_wgpu::wgpu;
+use egui_wgpu::wgpu::{self, TextureFormat};
 use egui_winit::winit;
 use egui_winit::winit::window::Window;
 
@@ -35,12 +35,7 @@ impl<'a> GpuContext<'a> {
             .unwrap();
 
         let surface_caps = surface.get_capabilities(&adapter);
-        let surface_format = surface_caps
-            .formats
-            .iter()
-            .find(|f| f.is_srgb())
-            .copied()
-            .unwrap_or(surface_caps.formats[0]);
+        let surface_format = TextureFormat::Rgba8Unorm;
 
         let size = window.inner_size();
         let surface_config = wgpu::SurfaceConfiguration {

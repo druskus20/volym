@@ -39,7 +39,7 @@ impl GpuWriteTexture2D {
         }
     }
 
-    pub fn new(ctx: &GpuContext, state: &State) -> Self {
+    pub fn new(ctx: &GpuContext) -> Self {
         let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Render Input Texture"),
             size: wgpu::Extent3d {
@@ -51,7 +51,9 @@ impl GpuWriteTexture2D {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
+            usage: wgpu::TextureUsages::STORAGE_BINDING
+                | wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::RENDER_ATTACHMENT,
             view_formats: &[],
         });
         Self::from_wgpu_texture(texture)
@@ -110,7 +112,9 @@ impl GpuReadTexture2D {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
+            usage: wgpu::TextureUsages::STORAGE_BINDING
+                | wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::RENDER_ATTACHMENT,
             view_formats: &[],
         });
 
