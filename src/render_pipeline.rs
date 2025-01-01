@@ -48,13 +48,13 @@ impl RenderPipeline {
                 layout: Some(&pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &shader,
-                    entry_point: &"vs_main",
+                    entry_point: "vs_main",
                     buffers: &[],
                     compilation_options: Default::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
-                    entry_point: &"fs_main",
+                    entry_point: "fs_main",
                     targets: &[Some(wgpu::ColorTargetState {
                         format: ctx.surface_config.format,
                         blend: Some(wgpu::BlendState::REPLACE),

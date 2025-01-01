@@ -1,4 +1,3 @@
-use egui_wgpu::wgpu;
 use std::path::Path;
 
 use importance::GpuImportances;

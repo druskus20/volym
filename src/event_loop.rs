@@ -83,7 +83,7 @@ pub fn run<T: std::fmt::Debug>(
                                         .default_width(800.0)
                                         .resizable(false)
                                         .anchor(Align2::CENTER_CENTER, [0.0, 0.0])
-                                        .show(&ui, |mut ui| {
+                                        .show(ui, |ui| {
                                             if ui.add(egui::Button::new("Click me")).clicked() {
                                                 println!("PRESSED")
                                             }
@@ -101,10 +101,10 @@ pub fn run<T: std::fmt::Debug>(
                                     &ctx.device,
                                     &ctx.queue,
                                     &mut encoder,
-                                    &ctx.window,
+                                    ctx.window,
                                     &view,
                                     screen_descriptor,
-                                    |ui| GUI(ui),
+                                    GUI,
                                 );
 
                                 //demo.compute_pass(&ctx).unwrap();

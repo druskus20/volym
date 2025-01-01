@@ -5,7 +5,7 @@ use crate::{
     gpu_resources::{
         camera::GpuCamera,
         debug_matrix::GpuDebugMatrix,
-        texture::{GpuReadTexture2D, GpuWriteTexture2D},
+        texture::GpuWriteTexture2D,
         BindGroupLayoutEntryUnbound, ToBindGroupEntries, ToBindGroupLayoutEntries, ToGpuResources,
     },
     state::State,

@@ -1,15 +1,7 @@
 use cli::Command;
 use cli::Demo;
-use egui_wgpu::wgpu;
-use egui_winit::winit::{
-    event::*,
-    event_loop::EventLoop,
-    keyboard::{Key, NamedKey},
-    window::{Window, WindowBuilder},
-};
-
+use egui_winit::winit::{event_loop::EventLoop, window::WindowBuilder};
 use gpu_context::GpuContext;
-use gpu_resources::texture::GpuReadTexture2D;
 use gpu_resources::texture::GpuWriteTexture2D;
 use render_pipeline::RenderPipeline;
 use tracing_error::ErrorLayer;

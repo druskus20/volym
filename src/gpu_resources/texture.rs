@@ -1,4 +1,3 @@
-use crate::state::State;
 
 use crate::gpu_context::GpuContext;
 use egui_wgpu::wgpu;
