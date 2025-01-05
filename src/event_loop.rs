@@ -76,11 +76,12 @@ pub fn run<T: std::fmt::Debug>(
                                     pixels_per_point: ctx.window().scale_factor() as f32,
                                 };
 
+                                // This is a horrible thing
                                 pub fn GUI(ui: &Context) {
                                     egui::Window::new("Streamline CFD")
                                         // .vscroll(true)
                                         .default_open(true)
-                                        .max_width(1000.0)
+                                        .max_width(100.0)
                                         .max_height(800.0)
                                         .default_width(800.0)
                                         .resizable(false)
@@ -99,6 +100,9 @@ pub fn run<T: std::fmt::Debug>(
                                     .texture
                                     .create_view(&wgpu::TextureViewDescriptor::default());
 
+                                demo.compute_pass(&ctx).unwrap();
+                                let r = render_pipeline.render_pass(&ctx, &view);
+
                                 egui.draw(
                                     &ctx.device,
                                     &ctx.queue,
@@ -109,9 +113,9 @@ pub fn run<T: std::fmt::Debug>(
                                     GUI,
                                 );
 
-                                //demo.compute_pass(&ctx).unwrap();
-                                //let r = render_pipeline.render_pass(&ctx, &view);
-                                let r = Ok(());
+                                // Call submit on egui
+                                ctx.queue.submit(Some(encoder.finish()));
+
                                 // Before presenting to the screen we need to let the compositor know - This effectively
                                 // syncs us to the monitor refresh rate.
                                 // https://docs.rs/winit/latest/winit/window/struct.Window.html#platform-specific-2

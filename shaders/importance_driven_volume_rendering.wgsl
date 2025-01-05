@@ -1,4 +1,4 @@
-const USE_CONE_IMPORTANCE_CHECK = true;
+const USE_CONE_IMPORTANCE_CHECK = false;
 
 struct CameraUniforms {
     view_matrix: mat4x4<f32>,
