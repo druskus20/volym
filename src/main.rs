@@ -1,9 +1,16 @@
+use std::time::Duration;
+
 use cli::Command;
 use cli::Demo;
+use egui::Event;
+use egui_winit::winit::event_loop::EventLoopBuilder;
+use egui_winit::winit::event_loop::EventLoopWindowTarget;
+use egui_winit::winit::window::Window;
 use egui_winit::winit::{event_loop::EventLoop, window::WindowBuilder};
 use gpu_context::GpuContext;
 use gpu_resources::texture::GpuWriteTexture2D;
 use render_pipeline::RenderPipeline;
+use tracing::info;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
 
@@ -29,16 +36,55 @@ fn main() -> Result<()> {
     setup_tracing(args.log_level.to_string())?;
     match args.command {
         Command::Run(Demo::Simple) => run::<Simple>(),
+        Command::Benchmark => run_benchmarks(),
     }
 }
 
-fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
-    // Hook window and event loop
-    let event_loop = EventLoop::new()?;
+#[derive(Debug, Clone, Copy)]
+enum EventLoopMsg {
+    Stop,
+}
+
+fn run_benchmarks() -> Result<()> {
+    let t = Duration::from_secs(10);
+
+    let event_loop = EventLoopBuilder::<EventLoopMsg>::with_user_event().build()?;
+    let event_loop_proxy = event_loop.create_proxy();
     let window = WindowBuilder::new()
         .with_title("Volym")
         .build(&event_loop)?;
 
+    // spawn a thread and pass the proxy
+    std::thread::spawn(move || {
+        std::thread::sleep(t);
+        event_loop_proxy.send_event(EventLoopMsg::Stop).unwrap();
+    });
+
+    let mut user_event_handler: fn(EventLoopMsg, &EventLoopWindowTarget<EventLoopMsg>) =
+        |event, control_flow| {
+            if let EventLoopMsg::Stop = event {
+                info!("Benchmark finished");
+                control_flow.exit();
+            }
+        };
+    run_with_event_loop::<Simple, EventLoopMsg>(window, event_loop, user_event_handler)?;
+
+    Ok(())
+}
+
+fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
+    let event_loop = EventLoop::<()>::new()?;
+    let window = WindowBuilder::new()
+        .with_title("Volym")
+        .build(&event_loop)?;
+    run_with_event_loop::<ComputeDemo, ()>(window, event_loop, |_, _| {})
+}
+
+fn run_with_event_loop<ComputeDemo: demos::ComputeDemo, UserEvent: std::fmt::Debug>(
+    window: Window,
+    event_loop: EventLoop<UserEvent>,
+    mut user_event_handler: impl FnMut(UserEvent, &EventLoopWindowTarget<UserEvent>),
+) -> Result<()> {
     // ctx needs to be independent to be moved into the event loop
     let ctx = pollster::block_on(GpuContext::new(&window))?;
 
@@ -68,6 +114,7 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
         render_pipeline,
         &compute_demo,
         &mut egui,
+        user_event_handler,
     )?;
 
     Ok(())

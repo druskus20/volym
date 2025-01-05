@@ -1,8 +1,9 @@
 use egui::{Align2, Context};
 use egui_winit::winit::{
     event::*,
-    event_loop::EventLoop,
+    event_loop::{EventLoop, EventLoopWindowTarget},
     keyboard::{KeyCode, PhysicalKey},
+    platform::run_on_demand::EventLoopExtRunOnDemand,
 };
 /// Event loop that handles window events and triggers rendering
 use std::time::{Duration, Instant};
@@ -23,6 +24,7 @@ pub fn run<T: std::fmt::Debug>(
     render_pipeline: RenderPipeline,
     demo: &impl ComputeDemo,
     egui: &mut EguiContext,
+    mut user_event_handler: impl FnMut(T, &EventLoopWindowTarget<T>),
 ) -> Result<()> {
     let mut last_update = Instant::now();
     let mut frame_count = 0;
@@ -145,6 +147,7 @@ pub fn run<T: std::fmt::Debug>(
                     }
                 }
             }
+            Event::UserEvent(e) => user_event_handler(e, control_flow),
             _ => {}
         }
     })?;

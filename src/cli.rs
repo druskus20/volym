@@ -37,6 +37,9 @@ pub enum Command {
     /// Run the demo
     #[clap(subcommand)]
     Run(Demo),
+
+    /// Run benchmarks on all demos
+    Benchmark,
 }
 
 impl Default for Command {
