@@ -43,8 +43,8 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     let ctx = pollster::block_on(GpuContext::new(&window))?;
 
     // state needs to be mutable - thus separate from ctx
-    let aspect = ctx.surface_config.width as f32 / ctx.surface_config.height as f32;
-    let mut state = state::State::new(aspect);
+    let mut state =
+        state::State::new((ctx.surface_config.width / ctx.surface_config.height) as f32);
 
     // Setup render pipeline and compute demo.
     let compute_output_texture = GpuWriteTexture2D::new(&ctx);
