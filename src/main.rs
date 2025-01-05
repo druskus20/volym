@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use cli::Command;
-use cli::Demo;
-use egui_winit::winit::event_loop::EventLoopBuilder;
-use egui_winit::winit::event_loop::EventLoopWindowTarget;
-use egui_winit::winit::window::Window;
-use egui_winit::winit::{event_loop::EventLoop, window::WindowBuilder};
+use cli::{Command, Demo};
+use egui_winit::winit::{
+    event_loop::{EventLoop, EventLoopBuilder, EventLoopWindowTarget},
+    window::{Window, WindowBuilder},
+};
+use event_loop::EventLoopEx;
 use gpu_context::GpuContext;
 use gpu_resources::texture::GpuWriteTexture2D;
 use render_pipeline::RenderPipeline;
@@ -19,7 +19,7 @@ mod demos;
 mod event_loop;
 mod gpu_context;
 mod gpu_resources;
-mod gui_context;
+mod gui;
 mod render_pipeline;
 mod state;
 mod transfer_function;
@@ -40,14 +40,34 @@ fn main() -> Result<()> {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum EventLoopMsg {
+enum BenchmarkMsg {
     Stop,
 }
 
-fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
-    let t = Duration::from_secs(10);
+#[derive(Debug, Clone, Copy)]
+struct Settings {
+    refresh_rate_sync: bool,
+    secs_per_benchmark: u32,
+}
 
-    let event_loop = EventLoopBuilder::<EventLoopMsg>::with_user_event().build()?;
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            refresh_rate_sync: true,
+            secs_per_benchmark: 10,
+        }
+    }
+}
+
+fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
+    let settings = Settings {
+        refresh_rate_sync: false,
+        ..Settings::default()
+    };
+
+    let t = Duration::from_secs(settings.secs_per_benchmark as u64);
+
+    let event_loop = EventLoopBuilder::<BenchmarkMsg>::with_user_event().build()?;
     let event_loop_proxy = event_loop.create_proxy();
     let window = WindowBuilder::new()
         .with_title("Volym")
@@ -56,19 +76,19 @@ fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     // spawn a thread that will close the windo in `t` seconds
     std::thread::spawn(move || {
         std::thread::sleep(t);
-        event_loop_proxy.send_event(EventLoopMsg::Stop).unwrap();
+        event_loop_proxy.send_event(BenchmarkMsg::Stop).unwrap();
     });
 
-    let user_event_handler: fn(EventLoopMsg, &EventLoopWindowTarget<EventLoopMsg>) =
+    let user_event_handler: fn(BenchmarkMsg, &EventLoopWindowTarget<BenchmarkMsg>) =
         |event, control_flow| match event {
-            EventLoopMsg::Stop => {
+            BenchmarkMsg::Stop => {
                 info!("Benchmark finished");
                 control_flow.exit();
             }
             _ => (),
         };
 
-    run_with_event_loop::<Simple, EventLoopMsg>(window, event_loop, user_event_handler)?;
+    run_with_event_loop::<Simple, BenchmarkMsg>(window, event_loop, user_event_handler, settings)?;
 
     Ok(())
 }
@@ -78,13 +98,14 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     let window = WindowBuilder::new()
         .with_title("Volym")
         .build(&event_loop)?;
-    run_with_event_loop::<ComputeDemo, ()>(window, event_loop, |_, _| {})
+    run_with_event_loop::<ComputeDemo, ()>(window, event_loop, |_, _| {}, Settings::default())
 }
 
 fn run_with_event_loop<ComputeDemo: demos::ComputeDemo, UserEvent: std::fmt::Debug>(
     window: Window,
     event_loop: EventLoop<UserEvent>,
     user_event_handler: impl FnMut(UserEvent, &EventLoopWindowTarget<UserEvent>),
+    settings: Settings,
 ) -> Result<()> {
     // ctx needs to be independent to be moved into the event loop
     let ctx = pollster::block_on(GpuContext::new(&window))?;
@@ -100,7 +121,7 @@ fn run_with_event_loop<ComputeDemo: demos::ComputeDemo, UserEvent: std::fmt::Deb
     let render_input_texture = compute_output_texture.into_write_texture_2d(&ctx);
     let render_pipeline = RenderPipeline::init(&ctx, &render_input_texture)?;
 
-    let mut egui = gui_context::EguiContext::new(
+    let mut egui = gui::GuiContext::new(
         &ctx.device,               // wgpu Device
         ctx.surface_config.format, // TextureFormat
         None,                      // this can be None
@@ -108,11 +129,11 @@ fn run_with_event_loop<ComputeDemo: demos::ComputeDemo, UserEvent: std::fmt::Deb
         &window,                   // winit Window
     );
 
-    event_loop::run(
-        event_loop,
+    event_loop.run_volym(
+        settings,
         ctx,
         &mut state,
-        render_pipeline,
+        &render_pipeline,
         &compute_demo,
         &mut egui,
         user_event_handler,

@@ -3,9 +3,7 @@ use std::path::PathBuf;
 
 use crate::{
     gpu_resources::{
-        camera::GpuCamera,
-        debug_matrix::GpuDebugMatrix,
-        texture::GpuWriteTexture2D,
+        camera::GpuCamera, debug_matrix::GpuDebugMatrix, texture::GpuWriteTexture2D,
         BindGroupLayoutEntryUnbound, ToBindGroupEntries, ToBindGroupLayoutEntries, ToGpuResources,
     },
     state::State,
@@ -143,11 +141,7 @@ impl BaseDemo {
         let base_inputs_layout = layout_from_unbound_entries(
             ctx,
             "Base Inputs Layout",
-            &[
-                //GpuVolume::BIND_GROUP_LAYOUT_ENTRIES,
-                GpuCamera::BIND_GROUP_LAYOUT_ENTRIES,
-                //GPUTransferFunction::BIND_GROUP_LAYOUT_ENTRIES,
-            ],
+            &[GpuCamera::BIND_GROUP_LAYOUT_ENTRIES],
         );
 
         let base_outputs_layout = layout_from_unbound_entries(
