@@ -25,7 +25,7 @@ impl GpuWriteTexture2D {
         Self::from_wgpu_texture(read_texture.texture)
     }
 
-    pub fn into_write_texture_2d(self, ctx: &GpuContext) -> GpuReadTexture2D {
+    pub fn into_read_texture_2d(self, ctx: &GpuContext) -> GpuReadTexture2D {
         GpuReadTexture2D::from_wgpu_texture(ctx, self.texture)
     }
 
@@ -49,9 +49,7 @@ impl GpuWriteTexture2D {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::STORAGE_BINDING
-                | wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
         Self::from_wgpu_texture(texture)
@@ -86,9 +84,9 @@ impl GpuReadTexture2D {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Linear,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
         let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -110,9 +108,7 @@ impl GpuReadTexture2D {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::STORAGE_BINDING
-                | wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::STORAGE_BINDING | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
 

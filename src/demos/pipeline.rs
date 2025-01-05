@@ -10,8 +10,8 @@ use crate::{
     Result,
 };
 use tracing::{debug, info};
-use wgpu;
 use wgpu::BindGroupLayout;
+use wgpu::{self, core::pipeline::PipelineCache};
 
 use crate::gpu_context::GpuContext;
 
