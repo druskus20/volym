@@ -56,7 +56,16 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
                     ref event,
                     window_id,
                 } if window_id == ctx.window().id() => {
-                    if !state.process_input(event) && !egui.handle_input(ctx.window, &event) {
+                    let is_egui_event = egui.handle_input(ctx.window, event);
+                    if is_egui_event {
+                        return;
+                    }
+                    let is_volym_event = state.process_input(event);
+                    if is_volym_event {
+                        return;
+                    }
+
+                    if !state.process_input(event) {
                         match event {
                             WindowEvent::CloseRequested
                             | WindowEvent::KeyboardInput {
@@ -98,7 +107,6 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
 
                                     demo.compute_pass(&ctx).unwrap();
                                     let r = render_pipeline.render_pass(&ctx, &view);
-
                                     egui.draw(&ctx, state, &view, screen_descriptor);
 
                                     // Before presenting to the screen we need to let the compositor know - This effectively
