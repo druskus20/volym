@@ -1,7 +1,7 @@
 use bytemuck::{Pod, Zeroable};
 use cgmath::{Matrix4, SquareMatrix};
-use egui_wgpu::wgpu;
-use egui_wgpu::wgpu::util::DeviceExt;
+use wgpu;
+use wgpu::util::DeviceExt;
 
 use crate::gpu_context::GpuContext;
 use crate::Result;

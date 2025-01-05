@@ -3,17 +3,15 @@ use std::path::PathBuf;
 
 use crate::{
     gpu_resources::{
-        camera::GpuCamera,
-        debug_matrix::GpuDebugMatrix,
-        texture::GpuWriteTexture2D,
+        camera::GpuCamera, debug_matrix::GpuDebugMatrix, texture::GpuWriteTexture2D,
         BindGroupLayoutEntryUnbound, ToBindGroupEntries, ToBindGroupLayoutEntries, ToGpuResources,
     },
     state::State,
     Result,
 };
-use egui_wgpu::wgpu;
-use egui_wgpu::wgpu::BindGroupLayout;
 use tracing::{debug, info};
+use wgpu;
+use wgpu::BindGroupLayout;
 
 use crate::gpu_context::GpuContext;
 
@@ -53,8 +51,9 @@ impl DemoPipeline {
                 label: Some("Compute Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader,
-                entry_point: "main",
+                entry_point: Some("main"),
                 compilation_options: Default::default(),
+                cache: None,
             });
 
         Ok(DemoPipeline { pipeline })
@@ -76,7 +75,7 @@ impl DemoPipeline {
             compute_pass.set_pipeline(self.as_ref());
 
             for (i, bind_group) in bind_groups.iter().enumerate() {
-                compute_pass.set_bind_group(i as u32, bind_group, &[]);
+                compute_pass.set_bind_group(i as u32, *bind_group, &[]);
             }
 
             // size.width + 15 ensures that any leftover pixels (less than a full workgroup 16x16)

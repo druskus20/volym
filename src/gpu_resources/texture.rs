@@ -1,5 +1,5 @@
 use crate::gpu_context::GpuContext;
-use egui_wgpu::wgpu;
+use wgpu;
 
 use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
 

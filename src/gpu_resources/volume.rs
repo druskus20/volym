@@ -1,4 +1,4 @@
-use egui_wgpu::wgpu;
+use wgpu;
 use tracing::info;
 
 use crate::{gpu_resources::flip_3d_texture_y, Result};

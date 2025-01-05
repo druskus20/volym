@@ -1,11 +1,11 @@
 use cli::Command;
 use cli::Demo;
-use egui_winit::winit::{event_loop::EventLoop, window::WindowBuilder};
 use gpu_context::GpuContext;
 use gpu_resources::texture::GpuWriteTexture2D;
 use render_pipeline::RenderPipeline;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
+use winit::{event_loop::EventLoop, window::WindowBuilder};
 
 mod camera;
 mod cli;
@@ -13,7 +13,7 @@ mod demos;
 mod event_loop;
 mod gpu_context;
 mod gpu_resources;
-mod gui_context;
+//mod gui_context;
 mod render_pipeline;
 mod state;
 mod transfer_function;
@@ -53,13 +53,13 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     let render_input_texture = compute_output_texture.into_write_texture_2d(&ctx);
     let render_pipeline = RenderPipeline::init(&ctx, &render_input_texture)?;
 
-    let mut egui = gui_context::EguiContext::new(
-        &ctx.device,               // wgpu Device
-        ctx.surface_config.format, // TextureFormat
-        None,                      // this can be None
-        1,                         // samples
-        &window,                   // winit Window
-    );
+    //let mut egui = gui_context::EguiContext::new(
+    //    &ctx.device,               // wgpu Device
+    //    ctx.surface_config.format, // TextureFormat
+    //    None,                      // this can be None
+    //    1,                         // samples
+    //    &window,                   // winit Window
+    //);
 
     event_loop::run(
         event_loop,
@@ -67,7 +67,7 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
         &mut state,
         render_pipeline,
         &compute_demo,
-        &mut egui,
+        //&mut egui,
     )?;
 
     Ok(())

@@ -1,13 +1,13 @@
 use egui::epaint::Shadow;
 use egui::{Context, Visuals};
-use egui_wgpu::Renderer;
-use egui_wgpu::ScreenDescriptor;
+use Renderer;
+use ScreenDescriptor;
 
-use egui_wgpu::wgpu;
-use egui_wgpu::wgpu::{CommandEncoder, Device, Queue, TextureFormat, TextureView};
-use egui_winit::winit::event::WindowEvent;
-use egui_winit::winit::window::Window;
-use egui_winit::State;
+use wgpu;
+use wgpu::{CommandEncoder, Device, Queue, TextureFormat, TextureView};
+use winit::event::WindowEvent;
+use winit::window::Window;
+use State;
 
 pub struct EguiContext {
     pub context: Context,

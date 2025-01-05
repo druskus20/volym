@@ -8,7 +8,7 @@ use crate::Result;
 
 use crate::gpu_context::GpuContext;
 
-use egui_wgpu::wgpu::{self, TextureView};
+use wgpu::{self, TextureView};
 
 #[derive(Debug)]
 pub struct RenderPipeline {
@@ -48,13 +48,13 @@ impl RenderPipeline {
                 layout: Some(&pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &shader,
-                    entry_point: "vs_main",
+                    entry_point: Some("vs_main"),
                     buffers: &[],
                     compilation_options: Default::default(),
                 },
                 fragment: Some(wgpu::FragmentState {
                     module: &shader,
-                    entry_point: "fs_main",
+                    entry_point: Some("fs_main"),
                     targets: &[Some(wgpu::ColorTargetState {
                         format: ctx.surface_config.format,
                         blend: Some(wgpu::BlendState::REPLACE),
@@ -69,6 +69,7 @@ impl RenderPipeline {
                 depth_stencil: None,
                 multisample: wgpu::MultisampleState::default(),
                 multiview: None,
+                cache: None,
             });
 
         let render_pipeline_resources = input_texture.to_gpu_resources();

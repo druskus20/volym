@@ -1,6 +1,6 @@
 use crate::gpu_context::GpuContext;
 use crate::state::State;
-use egui_wgpu::wgpu;
+use wgpu;
 
 use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
 

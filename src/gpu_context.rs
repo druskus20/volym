@@ -1,7 +1,7 @@
 // lib.rs
-use egui_wgpu::wgpu::{self, TextureFormat};
-use egui_winit::winit;
-use egui_winit::winit::window::Window;
+use wgpu::{self, TextureFormat};
+use winit;
+use winit::window::Window;
 
 use crate::Result;
 

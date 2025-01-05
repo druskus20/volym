@@ -1,4 +1,4 @@
-use egui_wgpu::wgpu;
+use wgpu;
 use std::path::Path;
 
 use serde::Deserialize;
