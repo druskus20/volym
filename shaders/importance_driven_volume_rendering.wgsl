@@ -1,4 +1,6 @@
-const USE_CONE_IMPORTANCE_CHECK = false;
+const USE_CONE_IMPORTANCE_CHECK = true;
+const USE_IMPORTANCE_COLORING = false;
+const USE_OPACITY = true;  // New constant to toggle opacity mode
 
 struct CameraUniforms {
     view_matrix: mat4x4<f32>,
@@ -28,64 +30,23 @@ var importances_texture: texture_3d<f32>;
 @group(2) @binding(5)
 var importances_sampler: sampler;
 
-fn ray_box_intersection(ray_origin: vec3<f32>, ray_direction: vec3<f32>) -> vec2<f32> {
-    let box_min = vec3<f32>(0.0);
-    let box_max = vec3<f32>(1.0);
-
-    let t1 = (box_min - ray_origin) / ray_direction;
-    let t2 = (box_max - ray_origin) / ray_direction;
-
-    let tmin = min(t1, t2);
-    let tmax = max(t1, t2);
-
-    let entry_point = max(max(tmin.x, tmin.y), tmin.z);
-    let exit_point = min(min(tmax.x, tmax.y), tmax.z);
-
-    return vec2<f32>(
-        max(entry_point, 0.0),
-        max(exit_point, 0.0)
-    );
-}
 
 fn has_non_zero_component(color: vec3<f32>) -> bool {
     let epsilon: f32 = 0.0001;
     return abs(color.x) > epsilon || abs(color.y) > epsilon || abs(color.z) > epsilon;
 }
 
+fn importance_to_color(importance: f32) -> vec4<f32> {
+    let alpha = importance;
 
-fn compute_gradient(volume: texture_3d<f32>, s: sampler, pos: vec3<f32>) -> vec3<f32> {
-    let offset = vec3<f32>(0.01, 0.01, 0.01);
-    let grad_x = (textureSampleLevel(volume, s, pos + vec3<f32>(offset.x, 0.0, 0.0), 0.0).r - textureSampleLevel(volume, s, pos - vec3<f32>(offset.x, 0.0, 0.0), 0.0).r) / (2.0 * offset.x);
-    let grad_y = (textureSampleLevel(volume, s, pos + vec3<f32>(0.0, offset.y, 0.0), 0.0).r - textureSampleLevel(volume, s, pos - vec3<f32>(0.0, offset.y, 0.0), 0.0).r) / (2.0 * offset.y);
-    let grad_z = (textureSampleLevel(volume, s, pos + vec3<f32>(0.0, 0.0, offset.z), 0.0).r - textureSampleLevel(volume, s, pos - vec3<f32>(0.0, 0.0, offset.z), 0.0).r) / (2.0 * offset.z);
-
-    return normalize(vec3<f32>(grad_x, grad_y, grad_z));
+    // Brightened colors with increased saturation
+    return vec4<f32>(
+        min(importance * 1.5, 1.0),     // Increased red intensity
+        (1.0 - importance) * 1.2,       // Brightened green
+        0.2,                            // Added slight blue tint
+        alpha                           // Enhanced alpha
+    );
 }
-
-fn blinn_phong_shade(
-    pos: vec3<f32>,
-    color: vec3<f32>,
-    volume: texture_3d<f32>,
-    s: sampler
-) -> vec3<f32> {
-    let gradient_normal = compute_gradient(volume, s, pos);
-
-    if length(gradient_normal) > 0.0 {
-        let light_direction = normalize(vec3<f32>(1.0, 1.0, 1.0));
-        let eye_direction = normalize(camera.camera_position - pos);
-        let halfway_vector = normalize(eye_direction + light_direction);
-
-        let ambient = 0.1;
-        let diffuse = max(0.0, dot(gradient_normal, light_direction));
-        let specular = pow(max(0.0, dot(halfway_vector, gradient_normal)), 32.0);
-
-        return color * (ambient + 0.6 * diffuse) + vec3<f32>(1.0, 1.0, 1.0) * 0.3 * specular;
-    }
-
-    return color;
-}
-
-
 
 fn sample_cone_directions(main_direction: vec3<f32>, cone_angle: f32, sample_index: i32, total_samples: i32) -> vec3<f32> {
     let up = vec3<f32>(0.0, 1.0, 0.0);
@@ -136,7 +97,7 @@ fn has_important_object_ahead_cone(current_pos: vec3<f32>, main_direction: vec3<
 
 fn has_important_object_ahead_straight(current_pos: vec3<f32>, ray_direction: vec3<f32>, max_distance: f32) -> bool {
     var pos = current_pos;
-    let check_steps = 20;  // Number of steps to look ahead
+    let check_steps = 20;
     let step = (max_distance - length(current_pos)) / f32(check_steps);
 
     for (var i = 0; i < check_steps; i++) {
@@ -153,6 +114,59 @@ fn has_important_object_ahead_straight(current_pos: vec3<f32>, ray_direction: ve
         }
     }
     return false;
+}
+
+fn ray_box_intersection(ray_origin: vec3<f32>, ray_direction: vec3<f32>) -> vec2<f32> {
+    let box_min = vec3<f32>(0.0);
+    let box_max = vec3<f32>(1.0);
+
+    let t1 = (box_min - ray_origin) / ray_direction;
+    let t2 = (box_max - ray_origin) / ray_direction;
+
+    let tmin = min(t1, t2);
+    let tmax = max(t1, t2);
+
+    let entry_point = max(max(tmin.x, tmin.y), tmin.z);
+    let exit_point = min(min(tmax.x, tmax.y), tmax.z);
+
+    return vec2<f32>(
+        max(entry_point, 0.0),
+        max(exit_point, 0.0)
+    );
+}
+
+fn compute_gradient(volume: texture_3d<f32>, s: sampler, pos: vec3<f32>) -> vec3<f32> {
+    let offset = vec3<f32>(0.01, 0.01, 0.01);
+    let grad_x = (textureSampleLevel(volume, s, pos + vec3<f32>(offset.x, 0.0, 0.0), 0.0).r - textureSampleLevel(volume, s, pos - vec3<f32>(offset.x, 0.0, 0.0), 0.0).r) / (2.0 * offset.x);
+    let grad_y = (textureSampleLevel(volume, s, pos + vec3<f32>(0.0, offset.y, 0.0), 0.0).r - textureSampleLevel(volume, s, pos - vec3<f32>(0.0, offset.y, 0.0), 0.0).r) / (2.0 * offset.y);
+    let grad_z = (textureSampleLevel(volume, s, pos + vec3<f32>(0.0, 0.0, offset.z), 0.0).r - textureSampleLevel(volume, s, pos - vec3<f32>(0.0, 0.0, offset.z), 0.0).r) / (2.0 * offset.z);
+
+    return normalize(vec3<f32>(grad_x, grad_y, grad_z));
+}
+
+fn blinn_phong_shade(
+    pos: vec3<f32>,
+    color: vec3<f32>,
+    volume: texture_3d<f32>,
+    s: sampler
+) -> vec3<f32> {
+    let gradient_normal = compute_gradient(volume, s, pos);
+
+    if length(gradient_normal) > 0.0 {
+        let light_direction = normalize(vec3<f32>(1.0, 1.0, 1.0));
+        let eye_direction = normalize(camera.camera_position - pos);
+        let halfway_vector = normalize(eye_direction + light_direction);
+
+        // Increased ambient and diffuse components for brighter overall lighting
+        let ambient = 0.2;  // Increased from 0.1
+        let diffuse = max(0.0, dot(gradient_normal, light_direction));
+        // Increased specular power and intensity
+        let specular = pow(max(0.0, dot(halfway_vector, gradient_normal)), 24.0);  // Reduced from 32 for broader highlights
+
+        return color * (ambient + 0.7 * diffuse) + vec3<f32>(1.0, 1.0, 1.0) * 0.4 * specular;  // Increased multipliers
+    }
+
+    return color;
 }
 
 @compute @workgroup_size(16, 16, 1)
@@ -200,38 +214,54 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             continue;
         }
 
-        var has_important_object_ahead = false;
-        if USE_CONE_IMPORTANCE_CHECK {
-            has_important_object_ahead = has_important_object_ahead_cone(current_pos, ray_direction, intersection.y);
+        var color_and_alpha: vec4<f32>;
+        var use_alpha = USE_OPACITY;  // Now controlled by the USE_OPACITY constant
+
+        if USE_IMPORTANCE_COLORING {
+            color_and_alpha = importance_to_color(importance);
+            use_alpha = true;  // Always use alpha in importance coloring mode
         } else {
-            has_important_object_ahead = has_important_object_ahead_straight(current_pos, ray_direction, intersection.y);
+            // Check importance before rendering in normal mode
+            var has_important_object_ahead = false;
+            if USE_CONE_IMPORTANCE_CHECK {
+                has_important_object_ahead = has_important_object_ahead_cone(current_pos, ray_direction, intersection.y);
+            } else {
+                has_important_object_ahead = has_important_object_ahead_straight(current_pos, ray_direction, intersection.y);
+            }
+
+            if importance < 1.0 && has_important_object_ahead {
+                current_distance += step_size;
+                continue;
+            }
+
+            let transfer_color = textureSampleLevel(
+                transfer_function_texture,
+                transfer_function_sampler,
+                density,
+                0.0
+            );
+            color_and_alpha = transfer_color;
         }
 
-        if importance < 1.0 && has_important_object_ahead {
-            current_distance += step_size;
-            continue;
-        }
-
-        let transfer_color = textureSampleLevel(
-            transfer_function_texture,
-            transfer_function_sampler,
-            density,
-            0.0
+        let shaded_color = blinn_phong_shade(
+            current_pos,
+            color_and_alpha.rgb,
+            volume_texture,
+            volume_sampler
         );
 
-        if transfer_color.a > 0.0 {
-            let shaded_color = blinn_phong_shade(
-                current_pos,
-                transfer_color.rgb,
-                volume_texture,
-                volume_sampler
-            );
-
-            let alpha = 1.0 - pow(1.0 - transfer_color.a, step_size * 100.0);
+        if use_alpha {
+            // Use alpha blending when opacity is enabled
+            let alpha = 1.0 - pow(1.0 - color_and_alpha.a, step_size * 100.0);
             let opacity_contrib = (1.0 - accumulated_alpha) * alpha;
 
             accumulated_color += shaded_color * opacity_contrib;
             accumulated_alpha += opacity_contrib;
+        } else {
+            // In non-opacity mode, just use the latest color
+            accumulated_color = shaded_color;
+            accumulated_alpha = 1.0;
+            break;
         }
 
         current_distance += step_size;
@@ -239,6 +269,4 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     textureStore(output_texture, vec2<u32>(global_id.x, global_id.y),
         vec4<f32>(accumulated_color, accumulated_alpha));
-    //textureStore(debug_texture, vec2<u32>(global_id.x, global_id.y),
-    //    vec4<f32>(ray_direction, 1.0));
 }

@@ -28,7 +28,7 @@ impl Camera {
         let znear: f32 = 0.01;
         let zfar: f32 = 1000000.0;
         let max_distance = 10.0;
-        let min_distance = 1.0;
+        let min_distance = 0.5;
 
         Self {
             position,
