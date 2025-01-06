@@ -9,12 +9,8 @@ use tracing::{debug, error, info, warn};
 use egui_wgpu::{wgpu, ScreenDescriptor};
 
 use crate::{
-    demos::ComputeDemo,
-    gpu_context::GpuContext,
-    gui::{GuiContext},
-    render_pipeline::RenderPipeline,
-    state::State,
-    Result, RunSettings,
+    demos::ComputeDemo, gpu_context::GpuContext, gui::GuiContext, render_pipeline::RenderPipeline,
+    state::State, Result, RunSettings,
 };
 
 pub trait EventLoopEx {

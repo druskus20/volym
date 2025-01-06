@@ -57,7 +57,7 @@ impl Default for RunSettings {
     fn default() -> Self {
         Self {
             refresh_rate_sync: true,
-            secs_per_benchmark: 10,
+            secs_per_benchmark: 2,
         }
     }
 }
@@ -76,16 +76,20 @@ fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
 
     let parameters = StateParameters {
         camera_position: Point3::new(0.5, 0.5, 0.5),
+        density_trheshold: 0.15,
         use_cone_importance_check: false,
         use_importance_coloring: false,
         use_opacity: false,
         use_importance_rendering: false,
+        use_gaussian_smoothing: false,
     };
 
     let user_event_handler: fn(BenchmarkMsg, &EventLoopWindowTarget<BenchmarkMsg>) =
-        |event, control_flow| if let BenchmarkMsg::Stop = event {
-            info!("Benchmark finished");
-            control_flow.exit();
+        |event, control_flow| {
+            if let BenchmarkMsg::Stop = event {
+                info!("Benchmark finished");
+                control_flow.exit();
+            }
         };
 
     let sleep_t = Duration::from_secs(settings.secs_per_benchmark as u64);

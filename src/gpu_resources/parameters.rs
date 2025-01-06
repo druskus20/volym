@@ -55,10 +55,13 @@ impl ToGpuResources for GpuParameters {
 #[derive(Debug, Copy, Clone, Pod, Zeroable)]
 #[repr(C, align(16))]
 pub struct ParameterUniforms {
+    density_threshold: f32,
     use_cone_importance_check: u32,
     use_importance_coloring: u32,
     use_opacity: u32,
     use_importance_rendering: u32,
+    use_gaussian_smoothing: u32,
+    _padding: [u32; 2],
 }
 impl ParameterUniforms {
     // Convenience methods to convert u8 to bool
@@ -88,6 +91,9 @@ impl TryFrom<&State> for ParameterUniforms {
             use_importance_coloring: if s.use_importance_coloring { 1 } else { 0 },
             use_opacity: if s.use_opacity { 1 } else { 0 },
             use_importance_rendering: if s.use_importance_rendering { 1 } else { 0 },
+            density_threshold: s.density_threshold,
+            use_gaussian_smoothing: if s.use_gaussian_smoothing { 1 } else { 0 },
+            _padding: [0; 2],
         })
     }
 }

@@ -26,11 +26,15 @@ impl Default for TransferFunction {
         });
         tf.add_rgb_control_point(TransferControlPoint {
             color: Vector4::new(0.0, 1.0, 1.0, 1.0), // Cyan
-            iso_value: 0.4,                          // ~102/255
+            iso_value: 0.2,                          // ~102/255
         });
         tf.add_rgb_control_point(TransferControlPoint {
             color: Vector4::new(1.0, 1.0, 0.0, 1.0), // Yellow
-            iso_value: 0.6,                          // ~153/255
+            iso_value: 0.4,                          // ~153/255
+        });
+        tf.add_rgb_control_point(TransferControlPoint {
+            color: Vector4::new(1.0, 0.0, 1.0, 1.0), // Red
+            iso_value: 0.6,
         });
         tf.add_rgb_control_point(TransferControlPoint {
             color: Vector4::new(1.0, 0.0, 0.0, 1.0), // Red

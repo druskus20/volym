@@ -179,6 +179,12 @@ fn show_ui(state: &mut State, ui: &mut egui::Ui) {
         "Use cone importance check",
     );
     ui.add_space(10.0);
+    ui.checkbox(&mut state.use_gaussian_smoothing, "Use gaussian smoothing");
+    ui.add_space(10.0);
+
+    // slider for density threshold (min 0.005)
+    ui.add(egui::Slider::new(&mut state.density_threshold, 0.005..=1.0).text("Density Threshold"));
+
     //ui.heading("Transfer Function");
     //// Transfer function editor
     //let transfer_response = ui.allocate_rect(

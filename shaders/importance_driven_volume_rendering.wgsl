@@ -1,3 +1,4 @@
+
 struct CameraUniforms {
     view_matrix: mat4x4<f32>,
     projection_matrix: mat4x4<f32>,
@@ -6,10 +7,12 @@ struct CameraUniforms {
 }
 
 struct Parameters {
+  density_threshold: f32,
   use_cone_importance_check: u32,
   use_importance_coloring: u32,
   use_opacity: u32,
   use_importance_rendering: u32,
+  use_gaussian_smoothing: u32,
 }
 
 @group(0) @binding(0)
@@ -34,6 +37,40 @@ var transfer_function_sampler: sampler;
 var importances_texture: texture_3d<f32>;
 @group(2) @binding(5)
 var importances_sampler: sampler;
+
+
+fn gaussian_weight(x: f32, sigma: f32) -> f32 {
+    return exp(-(x * x) / (2.0 * sigma * sigma));
+}
+
+// The smoothing works by sampling multiple points along the ray around each
+// sample position, weighting these samples using a Gaussian function and
+// computing a weighted average for the final density value
+
+fn sample_volume_smoothed(pos: vec3<f32>, ray_dir: vec3<f32>, sigma: f32) -> f32 {
+    let kernel_size = 2;  // higher is slower
+    let step = 0.005;
+    var sum = 0.0;
+    var weight_sum = 0.0;
+
+    for (var i = -kernel_size; i <= kernel_size; i++) {
+        let offset = f32(i) * step;
+        let sample_pos = pos + ray_dir * offset;
+        
+        // Skip samples outside the volume
+        if any(sample_pos < vec3<f32>(0.0)) || any(sample_pos > vec3<f32>(1.0)) {
+            continue;
+        }
+
+        let weight = gaussian_weight(offset, sigma);
+        let sample = textureSampleLevel(volume_texture, volume_sampler, sample_pos, 0.0).r;
+
+        sum += sample * weight;
+        weight_sum += weight;
+    }
+
+    return sum / weight_sum;
+}
 
 
 fn has_non_zero_component(color: vec3<f32>) -> bool {
@@ -208,10 +245,17 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var current_distance = intersection.x;
     while current_distance < intersection.y && accumulated_alpha < 0.95 {
         let current_pos = ray_origin + ray_direction * current_distance;
-        let density = textureSampleLevel(volume_texture, volume_sampler, current_pos, 0.0).r;
+
+        var density = 0.0;
+        if parameters.use_gaussian_smoothing == 1 {
+            let sigma = 1.5; // higher = more smoothing
+            density = sample_volume_smoothed(current_pos, ray_direction, sigma);
+        } else {
+            density = textureSampleLevel(volume_texture, volume_sampler, current_pos, 0.0).r;
+        }
         let importance = textureSampleLevel(importances_texture, importances_sampler, current_pos, 0.0).r;
 
-        if density < 0.12 {
+        if density < parameters.density_threshold {
             current_distance += step_size;
             continue;
         }

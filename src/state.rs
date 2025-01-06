@@ -11,19 +11,23 @@ pub struct State {
     mouse_pressed: bool,
     last_mouse_position: Option<(f64, f64)>,
     pub transfer_points: Vec<(f32, egui::Color32)>,
+    pub density_threshold: f32,
     pub use_importance_coloring: bool,
     pub use_cone_importance_check: bool,
     pub use_opacity: bool,
     pub use_importance_rendering: bool,
+    pub use_gaussian_smoothing: bool,
 }
 
 #[derive(Debug)]
 pub struct StateParameters {
     pub camera_position: Point3<f32>,
+    pub density_trheshold: f32,
     pub use_cone_importance_check: bool,
     pub use_importance_coloring: bool,
     pub use_opacity: bool,
     pub use_importance_rendering: bool,
+    pub use_gaussian_smoothing: bool,
 }
 
 impl Default for StateParameters {
@@ -34,26 +38,13 @@ impl Default for StateParameters {
             use_importance_coloring: false,
             use_opacity: true,
             use_importance_rendering: true,
+            density_trheshold: 0.12,
+            use_gaussian_smoothing: true,
         }
     }
 }
 
 impl State {
-    pub fn new(aspect: f32) -> Self {
-        let camera = crate::camera::Camera::default_with_aspect(aspect);
-        Self {
-            camera,
-            camera_controller: CameraController::new(0.2, 0.2),
-            mouse_pressed: false,
-            last_mouse_position: None,
-            transfer_points: Vec::new(),
-            use_cone_importance_check: false,
-            use_importance_coloring: false,
-            use_opacity: true,
-            use_importance_rendering: true,
-        }
-    }
-
     pub fn with_parameters(aspect: f32, parameters: StateParameters) -> Self {
         let camera =
             crate::camera::Camera::default_with_aspect_and_pos(aspect, parameters.camera_position);
@@ -63,10 +54,12 @@ impl State {
             mouse_pressed: false,
             last_mouse_position: None,
             transfer_points: Vec::new(),
+            density_threshold: parameters.density_trheshold,
             use_cone_importance_check: parameters.use_cone_importance_check,
             use_importance_coloring: parameters.use_importance_coloring,
             use_opacity: parameters.use_opacity,
             use_importance_rendering: parameters.use_importance_rendering,
+            use_gaussian_smoothing: parameters.use_gaussian_smoothing,
         }
     }
 
