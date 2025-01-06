@@ -47,6 +47,12 @@ fn ray_box_intersection(ray_origin: vec3<f32>, ray_direction: vec3<f32>) -> vec2
     );
 }
 
+fn has_non_zero_component(color: vec3<f32>) -> bool {
+    let epsilon: f32 = 0.0001;
+    return abs(color.x) > epsilon || abs(color.y) > epsilon || abs(color.z) > epsilon;
+}
+
+
 fn compute_gradient(volume: texture_3d<f32>, s: sampler, pos: vec3<f32>) -> vec3<f32> {
     let offset = vec3<f32>(0.01, 0.01, 0.01);
     let grad_x = (textureSampleLevel(volume, s, pos + vec3<f32>(offset.x, 0.0, 0.0), 0.0).r - textureSampleLevel(volume, s, pos - vec3<f32>(offset.x, 0.0, 0.0), 0.0).r) / (2.0 * offset.x);
@@ -233,6 +239,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     textureStore(output_texture, vec2<u32>(global_id.x, global_id.y),
         vec4<f32>(accumulated_color, accumulated_alpha));
-    textureStore(debug_texture, vec2<u32>(global_id.x, global_id.y),
-        vec4<f32>(ray_direction, 1.0));
+    //textureStore(debug_texture, vec2<u32>(global_id.x, global_id.y),
+    //    vec4<f32>(ray_direction, 1.0));
 }

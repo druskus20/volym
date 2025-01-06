@@ -80,7 +80,7 @@ impl GuiContext {
         {
             let raw_input = self.state.take_egui_input(window);
             let full_output = self.egui_ctx.run(raw_input, |ui| {
-                egui::Window::new("Streamline CFD")
+                egui::Window::new("Volym")
                     .vscroll(true)
                     .default_open(true)
                     .default_width(300.0)
