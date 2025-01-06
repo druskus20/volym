@@ -83,8 +83,8 @@ impl GuiContext {
                 egui::Window::new("Volym")
                     .vscroll(true)
                     .default_open(true)
-                    .default_width(300.0)
-                    .default_height(170.0)
+                    .default_width(200.0)
+                    .default_height(300.0)
                     .resizable(true)
                     .show(ui, |ui| {
                         show_ui(state, ui);
@@ -162,7 +162,22 @@ fn show_ui(state: &mut State, ui: &mut egui::Ui) {
     }
 
     ui.add_space(10.0);
-    ui.checkbox(&mut state.show_importance, "Show Importance Coloring");
+    ui.checkbox(
+        &mut state.use_importance_coloring,
+        "Use Importance Coloring",
+    );
+    ui.add_space(10.0);
+    ui.checkbox(&mut state.use_opacity, "Use opacity");
+    ui.add_space(10.0);
+    ui.checkbox(
+        &mut state.use_importance_rendering,
+        "Use importance rendering",
+    );
+    ui.add_space(10.0);
+    ui.checkbox(
+        &mut state.use_cone_importance_check,
+        "Use cone importance check",
+    );
     ui.add_space(10.0);
     //ui.heading("Transfer Function");
     //// Transfer function editor

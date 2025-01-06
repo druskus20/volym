@@ -16,14 +16,14 @@ use crate::{
     gui::{self, GuiContext},
     render_pipeline::RenderPipeline,
     state::State,
-    Result, Settings,
+    Result, RunSettings,
 };
 
 pub trait EventLoopEx {
     type UserEvent: std::fmt::Debug;
     fn run_volym(
         self,
-        settings: Settings,
+        settings: RunSettings,
         ctx: GpuContext,
         state: &mut State,
         render_pipeline: &RenderPipeline,
@@ -38,7 +38,7 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
     #[tracing::instrument(skip_all)]
     fn run_volym(
         self,
-        settings: Settings,
+        settings: RunSettings,
         mut ctx: GpuContext,
         state: &mut State,
         render_pipeline: &RenderPipeline,

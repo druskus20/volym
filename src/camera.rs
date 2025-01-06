@@ -19,16 +19,40 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(aspect: f32) -> Self {
+    pub fn default_with_aspect(aspect: f32) -> Self {
         let position = Point3::new(0.5, 0.5, 0.5);
         let target = Point3::new(0.5, 0.5, 0.5);
         let up = Vector3::new(0.0, 1.0, 0.0);
         let fovy: f32 = 90.0;
-        let aspect: f32 = aspect;
         let znear: f32 = 0.01;
         let zfar: f32 = 1000000.0;
         let max_distance = 10.0;
-        let min_distance = 0.5;
+        let min_distance = 1.0;
+
+        Self {
+            position,
+            aspect,
+            fovy,
+            znear,
+            zfar,
+            horizontal_angle: 0.0,
+            vertical_angle: 0.0,
+            distance: 2.0,
+            target,
+            up,
+            max_distance,
+            min_distance,
+        }
+    }
+
+    pub fn default_with_aspect_and_pos(aspect: f32, position: Point3<f32>) -> Self {
+        let target = Point3::new(0.5, 0.5, 0.5);
+        let up = Vector3::new(0.0, 1.0, 0.0);
+        let fovy: f32 = 90.0;
+        let znear: f32 = 0.01;
+        let zfar: f32 = 1000000.0;
+        let max_distance = 10.0;
+        let min_distance = 1.0;
 
         Self {
             position,

@@ -1,7 +1,3 @@
-const USE_CONE_IMPORTANCE_CHECK = true;
-const USE_IMPORTANCE_COLORING = false;
-const USE_OPACITY = true;  // New constant to toggle opacity mode
-
 struct CameraUniforms {
     view_matrix: mat4x4<f32>,
     projection_matrix: mat4x4<f32>,
@@ -9,8 +5,17 @@ struct CameraUniforms {
     camera_position: vec3<f32>,
 }
 
+struct Parameters {
+  use_cone_importance_check: u32,
+  use_importance_coloring: u32,
+  use_opacity: u32,
+  use_importance_rendering: u32,
+}
+
 @group(0) @binding(0)
 var<uniform> camera: CameraUniforms;
+@group(0) @binding(1) 
+var<uniform> parameters: Parameters;
 
 @group(1) @binding(0)
 var output_texture: texture_storage_2d<rgba8unorm, write>;
@@ -39,12 +44,11 @@ fn has_non_zero_component(color: vec3<f32>) -> bool {
 fn importance_to_color(importance: f32) -> vec4<f32> {
     let alpha = importance;
 
-    // Brightened colors with increased saturation
     return vec4<f32>(
-        min(importance * 1.5, 1.0),     // Increased red intensity
-        (1.0 - importance) * 1.2,       // Brightened green
-        0.2,                            // Added slight blue tint
-        alpha                           // Enhanced alpha
+        min(importance * 1.5, 1.0),
+        (1.0 - importance) * 1.2,
+        0.2,
+        alpha
     );
 }
 
@@ -157,13 +161,11 @@ fn blinn_phong_shade(
         let eye_direction = normalize(camera.camera_position - pos);
         let halfway_vector = normalize(eye_direction + light_direction);
 
-        // Increased ambient and diffuse components for brighter overall lighting
-        let ambient = 0.2;  // Increased from 0.1
+        let ambient = 0.2;
         let diffuse = max(0.0, dot(gradient_normal, light_direction));
-        // Increased specular power and intensity
-        let specular = pow(max(0.0, dot(halfway_vector, gradient_normal)), 24.0);  // Reduced from 32 for broader highlights
+        let specular = pow(max(0.0, dot(halfway_vector, gradient_normal)), 24.0);
 
-        return color * (ambient + 0.7 * diffuse) + vec3<f32>(1.0, 1.0, 1.0) * 0.4 * specular;  // Increased multipliers
+        return color * (ambient + 0.7 * diffuse) + vec3<f32>(1.0, 1.0, 1.0) * 0.4 * specular;
     }
 
     return color;
@@ -215,23 +217,24 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
 
         var color_and_alpha: vec4<f32>;
-        var use_alpha = USE_OPACITY;  // Now controlled by the USE_OPACITY constant
+        var use_alpha = parameters.use_opacity == 1;
 
-        if USE_IMPORTANCE_COLORING {
+        if parameters.use_importance_coloring == 1 {
             color_and_alpha = importance_to_color(importance);
-            use_alpha = true;  // Always use alpha in importance coloring mode
+            use_alpha = true;
         } else {
-            // Check importance before rendering in normal mode
-            var has_important_object_ahead = false;
-            if USE_CONE_IMPORTANCE_CHECK {
-                has_important_object_ahead = has_important_object_ahead_cone(current_pos, ray_direction, intersection.y);
-            } else {
-                has_important_object_ahead = has_important_object_ahead_straight(current_pos, ray_direction, intersection.y);
-            }
+            if parameters.use_importance_rendering == 1 {
+                var has_important_object_ahead = false;
+                if parameters.use_cone_importance_check == 1 {
+                    has_important_object_ahead = has_important_object_ahead_cone(current_pos, ray_direction, intersection.y);
+                } else {
+                    has_important_object_ahead = has_important_object_ahead_straight(current_pos, ray_direction, intersection.y);
+                }
 
-            if importance < 1.0 && has_important_object_ahead {
-                current_distance += step_size;
+                if importance < 1.0 && has_important_object_ahead {
+                    current_distance += step_size;
                 continue;
+                }
             }
 
             let transfer_color = textureSampleLevel(
@@ -251,14 +254,12 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         );
 
         if use_alpha {
-            // Use alpha blending when opacity is enabled
             let alpha = 1.0 - pow(1.0 - color_and_alpha.a, step_size * 100.0);
             let opacity_contrib = (1.0 - accumulated_alpha) * alpha;
 
             accumulated_color += shaded_color * opacity_contrib;
             accumulated_alpha += opacity_contrib;
         } else {
-            // In non-opacity mode, just use the latest color
             accumulated_color = shaded_color;
             accumulated_alpha = 1.0;
             break;

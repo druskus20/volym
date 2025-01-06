@@ -1,14 +1,17 @@
 use std::time::Duration;
 
+use cgmath::Point3;
 use cli::{Command, Demo};
 use egui_winit::winit::{
+    self,
     event_loop::{EventLoop, EventLoopBuilder, EventLoopWindowTarget},
     window::{Window, WindowBuilder},
 };
 use event_loop::EventLoopEx;
 use gpu_context::GpuContext;
-use gpu_resources::texture::GpuWriteTexture2D;
+use gpu_resources::{parameters, texture::GpuWriteTexture2D};
 use render_pipeline::RenderPipeline;
+use state::StateParameters;
 use tracing::info;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter};
@@ -45,12 +48,12 @@ enum BenchmarkMsg {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Settings {
+struct RunSettings {
     refresh_rate_sync: bool,
     secs_per_benchmark: u32,
 }
 
-impl Default for Settings {
+impl Default for RunSettings {
     fn default() -> Self {
         Self {
             refresh_rate_sync: true,
@@ -60,12 +63,10 @@ impl Default for Settings {
 }
 
 fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
-    let settings = Settings {
+    let settings = RunSettings {
         refresh_rate_sync: false,
-        ..Settings::default()
+        ..RunSettings::default()
     };
-
-    let t = Duration::from_secs(settings.secs_per_benchmark as u64);
 
     let event_loop = EventLoopBuilder::<BenchmarkMsg>::with_user_event().build()?;
     let event_loop_proxy = event_loop.create_proxy();
@@ -73,11 +74,13 @@ fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
         .with_title("Volym")
         .build(&event_loop)?;
 
-    // spawn a thread that will close the windo in `t` seconds
-    std::thread::spawn(move || {
-        std::thread::sleep(t);
-        event_loop_proxy.send_event(BenchmarkMsg::Stop).unwrap();
-    });
+    let parameters = StateParameters {
+        camera_position: Point3::new(0.5, 0.5, 0.5),
+        use_cone_importance_check: false,
+        use_importance_coloring: false,
+        use_opacity: false,
+        use_importance_rendering: false,
+    };
 
     let user_event_handler: fn(BenchmarkMsg, &EventLoopWindowTarget<BenchmarkMsg>) =
         |event, control_flow| match event {
@@ -88,7 +91,19 @@ fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
             _ => (),
         };
 
-    run_with_event_loop::<Simple, BenchmarkMsg>(window, event_loop, user_event_handler, settings)?;
+    let sleep_t = Duration::from_secs(settings.secs_per_benchmark as u64);
+    std::thread::spawn(move || {
+        std::thread::sleep(sleep_t);
+        event_loop_proxy.send_event(BenchmarkMsg::Stop).unwrap();
+    });
+
+    run_with_event_loop::<Simple, BenchmarkMsg>(
+        window,
+        parameters,
+        settings,
+        event_loop,
+        user_event_handler,
+    )?;
 
     Ok(())
 }
@@ -97,22 +112,33 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     let event_loop = EventLoop::<()>::new()?;
     let window = WindowBuilder::new()
         .with_title("Volym")
+        .with_inner_size(winit::dpi::PhysicalSize::new(1024, 768))
         .build(&event_loop)?;
-    run_with_event_loop::<ComputeDemo, ()>(window, event_loop, |_, _| {}, Settings::default())
+
+    run_with_event_loop::<ComputeDemo, ()>(
+        window,
+        StateParameters::default(),
+        RunSettings::default(),
+        event_loop,
+        |_, _| {},
+    )
 }
 
 fn run_with_event_loop<ComputeDemo: demos::ComputeDemo, UserEvent: std::fmt::Debug>(
     window: Window,
+    state_parameters: StateParameters,
+    settings: RunSettings,
     event_loop: EventLoop<UserEvent>,
     user_event_handler: impl FnMut(UserEvent, &EventLoopWindowTarget<UserEvent>),
-    settings: Settings,
 ) -> Result<()> {
     // ctx needs to be independent to be moved into the event loop
     let ctx = pollster::block_on(GpuContext::new(&window))?;
 
     // state needs to be mutable - thus separate from ctx
-    let mut state =
-        state::State::new((ctx.surface_config.width / ctx.surface_config.height) as f32);
+    let mut state = state::State::with_parameters(
+        (ctx.surface_config.width / ctx.surface_config.height) as f32,
+        state_parameters,
+    );
 
     // Setup render pipeline and compute demo.
     let compute_output_texture = GpuWriteTexture2D::new(&ctx);

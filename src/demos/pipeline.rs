@@ -3,8 +3,9 @@ use std::path::PathBuf;
 
 use crate::{
     gpu_resources::{
-        camera::GpuCamera, debug_matrix::GpuDebugMatrix, texture::GpuWriteTexture2D,
-        BindGroupLayoutEntryUnbound, ToBindGroupEntries, ToBindGroupLayoutEntries, ToGpuResources,
+        camera::GpuCamera, debug_matrix::GpuDebugMatrix, parameters::GpuParameters,
+        texture::GpuWriteTexture2D, BindGroupLayoutEntryUnbound, ToBindGroupEntries,
+        ToBindGroupLayoutEntries, ToGpuResources,
     },
     state::State,
     Result,
@@ -114,6 +115,7 @@ pub struct BaseDemo {
 
     // Resources for state
     camera: GpuCamera,
+    parameters: GpuParameters,
     pub debug_matrix: GpuDebugMatrix,
     //output_texture: GpuStoreTexture2D,
 
@@ -136,12 +138,16 @@ impl BaseDemo {
         info!("Initializing Simple Demo");
 
         let camera = GpuCamera::new(ctx, state);
+        let parameters = GpuParameters::new(ctx, state);
         let debug_matrix = GpuDebugMatrix::new(ctx, state);
 
         let base_inputs_layout = layout_from_unbound_entries(
             ctx,
             "Base Inputs Layout",
-            &[GpuCamera::BIND_GROUP_LAYOUT_ENTRIES],
+            &[
+                GpuCamera::BIND_GROUP_LAYOUT_ENTRIES,
+                GpuParameters::BIND_GROUP_LAYOUT_ENTRIES,
+            ],
         );
 
         let base_outputs_layout = layout_from_unbound_entries(
@@ -173,7 +179,7 @@ impl BaseDemo {
             ctx,
             "Base Inputs Bind Group",
             &base_inputs_layout,
-            &[camera.to_gpu_resources()],
+            &[camera.to_gpu_resources(), parameters.to_gpu_resources()],
         );
         let base_outputs_group = bindgroup_from_resources(
             ctx,
@@ -190,6 +196,7 @@ impl BaseDemo {
         Ok(Self {
             compute_pipeline,
             camera,
+            parameters,
             debug_matrix,
             //output_texture: config.output_texture,
             base_inputs_group,
@@ -200,6 +207,7 @@ impl BaseDemo {
 
     pub fn update_gpu_state(&self, ctx: &GpuContext, state: &State) -> Result<()> {
         self.camera.update(ctx, state)?;
+        self.parameters.update(ctx, state)?;
         Ok(())
     }
 
