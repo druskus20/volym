@@ -1,9 +1,7 @@
-use egui::{Align2, Context};
 use egui_winit::winit::{
     event::*,
     event_loop::{EventLoop, EventLoopWindowTarget},
     keyboard::{KeyCode, PhysicalKey},
-    platform::run_on_demand::EventLoopExtRunOnDemand,
 };
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
@@ -13,7 +11,7 @@ use egui_wgpu::{wgpu, ScreenDescriptor};
 use crate::{
     demos::ComputeDemo,
     gpu_context::GpuContext,
-    gui::{self, GuiContext},
+    gui::{GuiContext},
     render_pipeline::RenderPipeline,
     state::State,
     Result, RunSettings,
@@ -112,7 +110,7 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
                                     // Before presenting to the screen we need to let the compositor know - This effectively
                                     // syncs us to the monitor refresh rate.
                                     // https://docs.rs/winit/latest/winit/window/struct.Window.html#platform-specific-2
-                                    if (settings.refresh_rate_sync) {
+                                    if settings.refresh_rate_sync {
                                         ctx.window.pre_present_notify();
                                     }
 

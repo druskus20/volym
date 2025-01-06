@@ -9,7 +9,7 @@ use egui_winit::winit::{
 };
 use event_loop::EventLoopEx;
 use gpu_context::GpuContext;
-use gpu_resources::{parameters, texture::GpuWriteTexture2D};
+use gpu_resources::texture::GpuWriteTexture2D;
 use render_pipeline::RenderPipeline;
 use state::StateParameters;
 use tracing::info;
@@ -83,12 +83,9 @@ fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     };
 
     let user_event_handler: fn(BenchmarkMsg, &EventLoopWindowTarget<BenchmarkMsg>) =
-        |event, control_flow| match event {
-            BenchmarkMsg::Stop => {
-                info!("Benchmark finished");
-                control_flow.exit();
-            }
-            _ => (),
+        |event, control_flow| if let BenchmarkMsg::Stop = event {
+            info!("Benchmark finished");
+            control_flow.exit();
         };
 
     let sleep_t = Duration::from_secs(settings.secs_per_benchmark as u64);

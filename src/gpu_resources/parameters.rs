@@ -1,7 +1,5 @@
 use bytemuck::{Pod, Zeroable};
-use cgmath::{perspective, Deg, Matrix4, Point3, Vector3};
 use egui_wgpu::wgpu::{self, util::DeviceExt};
-use egui_winit::winit::{dpi::PhysicalPosition, event::MouseScrollDelta};
 
 use crate::{gpu_context::GpuContext, state::State};
 

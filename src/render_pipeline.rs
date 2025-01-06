@@ -1,4 +1,3 @@
-use egui_wgpu::wgpu::hal::empty::Encoder;
 use tracing::debug;
 
 use crate::demos::pipeline::layout_from_unbound_entries;

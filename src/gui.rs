@@ -1,10 +1,10 @@
 use egui::epaint::Shadow;
-use egui::{Align2, Color32, Context, Pos2, Rect, Vec2, Visuals};
+use egui::{Context, Visuals};
 use egui_wgpu::Renderer;
 use egui_wgpu::ScreenDescriptor;
 
 use egui_wgpu::wgpu;
-use egui_wgpu::wgpu::{CommandEncoder, Device, Queue, TextureFormat, TextureView};
+use egui_wgpu::wgpu::{Device, TextureFormat, TextureView};
 use egui_winit::winit::event::WindowEvent;
 use egui_winit::winit::window::Window;
 use egui_winit::State as EguiState;
