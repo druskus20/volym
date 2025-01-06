@@ -1,3 +1,3 @@
 # volym
 
-Volym ("volume") is a set of toy compute-based volume renderers 
+Volym ("volume") is an importance-driven volume renderer designed to be extensible
