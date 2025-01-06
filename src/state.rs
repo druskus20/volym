@@ -1,3 +1,4 @@
+use cgmath::Point3;
 use egui_winit::winit::event::{ElementState, MouseButton, WindowEvent};
 use tracing::debug;
 
@@ -9,6 +10,8 @@ pub struct State {
     pub camera_controller: CameraController,
     mouse_pressed: bool,
     last_mouse_position: Option<(f64, f64)>,
+    pub show_importance: bool,
+    pub transfer_points: Vec<(f32, egui::Color32)>,
 }
 
 impl State {
@@ -19,6 +22,8 @@ impl State {
             camera_controller: CameraController::new(0.2, 0.2),
             mouse_pressed: false,
             last_mouse_position: None,
+            show_importance: false,
+            transfer_points: Vec::new(),
         }
     }
 

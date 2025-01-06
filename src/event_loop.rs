@@ -56,7 +56,7 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
                     ref event,
                     window_id,
                 } if window_id == ctx.window().id() => {
-                    let is_egui_event = egui.handle_input(ctx.window, event);
+                    let is_egui_event = egui.process_input(ctx.window, event);
                     if is_egui_event {
                         return;
                     }
@@ -65,7 +65,7 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
                         return;
                     }
 
-                    if !state.process_input(event) {
+                    if !is_egui_event && !is_volym_event {
                         match event {
                             WindowEvent::CloseRequested
                             | WindowEvent::KeyboardInput {

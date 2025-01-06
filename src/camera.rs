@@ -14,6 +14,8 @@ pub struct Camera {
     pub horizontal_angle: f32,
     pub vertical_angle: f32,
     pub distance: f32,
+    pub max_distance: f32,
+    pub min_distance: f32,
 }
 
 impl Camera {
@@ -25,6 +27,8 @@ impl Camera {
         let aspect: f32 = aspect;
         let znear: f32 = 0.01;
         let zfar: f32 = 1000000.0;
+        let max_distance = 10.0;
+        let min_distance = 0.5;
 
         Self {
             position,
@@ -37,6 +41,8 @@ impl Camera {
             distance: 2.0,
             target,
             up,
+            max_distance,
+            min_distance,
         }
     }
 
@@ -44,7 +50,7 @@ impl Camera {
         self.horizontal_angle += horizontal_delta;
         self.vertical_angle = (self.vertical_angle + vertical_delta).clamp(-89.0, 89.0); // Prevent gimbal lock
 
-        self.distance = (self.distance + zoom_delta).clamp(1.0, 10.0);
+        self.distance = (self.distance + zoom_delta).clamp(self.min_distance, self.max_distance);
 
         let h_rad = self.horizontal_angle.to_radians();
         let v_rad = self.vertical_angle.to_radians();
