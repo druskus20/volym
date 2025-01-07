@@ -17,6 +17,8 @@ pub struct State {
     pub use_opacity: bool,
     pub use_importance_rendering: bool,
     pub use_gaussian_smoothing: bool,
+    pub importance_check_ahead_steps: u32,
+    pub raymarching_step_size: f32,
 }
 
 #[derive(Debug)]
@@ -28,6 +30,8 @@ pub struct StateParameters {
     pub use_opacity: bool,
     pub use_importance_rendering: bool,
     pub use_gaussian_smoothing: bool,
+    pub importance_check_ahead_steps: u32,
+    pub raymarching_step_size: f32,
 }
 
 impl Default for StateParameters {
@@ -40,6 +44,8 @@ impl Default for StateParameters {
             use_importance_rendering: true,
             density_trheshold: 0.12,
             use_gaussian_smoothing: true,
+            importance_check_ahead_steps: 20,
+            raymarching_step_size: 0.005,
         }
     }
 }
@@ -60,6 +66,8 @@ impl State {
             use_opacity: parameters.use_opacity,
             use_importance_rendering: parameters.use_importance_rendering,
             use_gaussian_smoothing: parameters.use_gaussian_smoothing,
+            importance_check_ahead_steps: parameters.importance_check_ahead_steps,
+            raymarching_step_size: parameters.raymarching_step_size,
         }
     }
 

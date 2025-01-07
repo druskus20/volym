@@ -182,6 +182,20 @@ fn show_ui(state: &mut State, ui: &mut egui::Ui) {
     ui.checkbox(&mut state.use_gaussian_smoothing, "Use gaussian smoothing");
     ui.add_space(10.0);
 
+    ui.add_space(10.0);
+    ui.add(
+        egui::Slider::new(&mut state.importance_check_ahead_steps, 2..=25)
+            .text("Importance rendering look ahead steps"),
+    );
+    ui.add_space(10.0);
+
+    ui.add_space(10.0);
+    ui.add(
+        egui::Slider::new(&mut state.raymarching_step_size, 0.001..=0.1)
+            .text("Raymarching step size"),
+    );
+    ui.add_space(10.0);
+
     // slider for density threshold (min 0.005)
     ui.add(egui::Slider::new(&mut state.density_threshold, 0.005..=1.0).text("Density Threshold"));
 

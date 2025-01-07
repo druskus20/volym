@@ -38,7 +38,7 @@ fn main() -> Result<()> {
     setup_tracing(args.log_level.to_string())?;
     match args.command {
         Command::Run(Demo::Simple) => run::<Simple>(),
-        Command::Benchmark => benchmark::<Simple>(),
+        Command::Benchmark => benchmark_all(),
     }
 }
 
@@ -57,12 +57,44 @@ impl Default for RunSettings {
     fn default() -> Self {
         Self {
             refresh_rate_sync: true,
-            secs_per_benchmark: 2,
+            secs_per_benchmark: 5,
         }
     }
 }
 
-fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
+fn benchmark_all() -> Result<()> {
+    // 3 different algorithms
+    //
+    // 0. base
+    // 1. importance rendering
+    // 2. imporatance rendering with cone projection
+    //
+    //
+    // Paramters:
+    // - density threshold
+    // - opacity
+    // - step-size
+    // - gaussian smoothing
+    // - check steps
+    //
+    //
+    let parameters = StateParameters {
+        camera_position: Point3::new(0.5, 0.5, 0.5),
+        density_trheshold: 0.15,
+        use_cone_importance_check: false,
+        use_importance_coloring: false,
+        use_opacity: false,
+        use_importance_rendering: false,
+        use_gaussian_smoothing: false,
+        importance_check_ahead_steps: 20,
+        raymarching_step_size: 0.005,
+    };
+
+    benchmark::<Simple>(parameters)?;
+
+    Ok(())
+}
+fn benchmark<ComputeDemo: demos::ComputeDemo>(parameters: StateParameters) -> Result<()> {
     let settings = RunSettings {
         refresh_rate_sync: false,
         ..RunSettings::default()
@@ -73,16 +105,6 @@ fn benchmark<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     let window = WindowBuilder::new()
         .with_title("Volym")
         .build(&event_loop)?;
-
-    let parameters = StateParameters {
-        camera_position: Point3::new(0.5, 0.5, 0.5),
-        density_trheshold: 0.15,
-        use_cone_importance_check: false,
-        use_importance_coloring: false,
-        use_opacity: false,
-        use_importance_rendering: false,
-        use_gaussian_smoothing: false,
-    };
 
     let user_event_handler: fn(BenchmarkMsg, &EventLoopWindowTarget<BenchmarkMsg>) =
         |event, control_flow| {

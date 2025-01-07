@@ -61,25 +61,8 @@ pub struct ParameterUniforms {
     use_opacity: u32,
     use_importance_rendering: u32,
     use_gaussian_smoothing: u32,
-    _padding: [u32; 2],
-}
-impl ParameterUniforms {
-    // Convenience methods to convert u8 to bool
-    pub fn use_cone_importance_check(&self) -> bool {
-        self.use_cone_importance_check != 0
-    }
-
-    pub fn use_importance_coloring(&self) -> bool {
-        self.use_importance_coloring != 0
-    }
-
-    pub fn use_opacity(&self) -> bool {
-        self.use_opacity != 0
-    }
-
-    pub fn use_importance_rendering(&self) -> bool {
-        self.use_importance_rendering != 0
-    }
+    importance_check_ahead_steps: u32,
+    raymarching_step_size: f32,
 }
 
 impl TryFrom<&State> for ParameterUniforms {
@@ -93,7 +76,8 @@ impl TryFrom<&State> for ParameterUniforms {
             use_importance_rendering: if s.use_importance_rendering { 1 } else { 0 },
             density_threshold: s.density_threshold,
             use_gaussian_smoothing: if s.use_gaussian_smoothing { 1 } else { 0 },
-            _padding: [0; 2],
+            importance_check_ahead_steps: s.importance_check_ahead_steps,
+            raymarching_step_size: s.raymarching_step_size,
         })
     }
 }

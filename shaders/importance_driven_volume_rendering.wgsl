@@ -13,6 +13,8 @@ struct Parameters {
   use_opacity: u32,
   use_importance_rendering: u32,
   use_gaussian_smoothing: u32,
+  importance_check_ahead_steps: u32,
+  raymarching_step_size: f32,
 }
 
 @group(0) @binding(0)
@@ -105,7 +107,7 @@ fn sample_cone_directions(main_direction: vec3<f32>, cone_angle: f32, sample_ind
 
 fn has_important_object_ahead_cone(current_pos: vec3<f32>, main_direction: vec3<f32>, max_distance: f32) -> bool {
     var pos = current_pos;
-    let check_steps = 20;
+    let check_steps = i32(parameters.importance_check_ahead_steps);
     let step = (max_distance - length(current_pos)) / f32(check_steps);
     let cone_samples = 8;
     let cone_angle = 0.2;
@@ -138,7 +140,7 @@ fn has_important_object_ahead_cone(current_pos: vec3<f32>, main_direction: vec3<
 
 fn has_important_object_ahead_straight(current_pos: vec3<f32>, ray_direction: vec3<f32>, max_distance: f32) -> bool {
     var pos = current_pos;
-    let check_steps = 20;
+    let check_steps = i32(parameters.importance_check_ahead_steps);
     let step = (max_distance - length(current_pos)) / f32(check_steps);
 
     for (var i = 0; i < check_steps; i++) {
@@ -238,7 +240,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    let step_size = 0.005;
+    let step_size = parameters.raymarching_step_size;
     var accumulated_color = vec3<f32>(0.0);
     var accumulated_alpha = 0.0;
 
