@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use cgmath::Point3;
 use cli::{Command, Demo};
+use egui::scroll_area::State;
 use egui_winit::winit::{
     self,
     event_loop::{EventLoop, EventLoopBuilder, EventLoopWindowTarget},
@@ -9,7 +10,7 @@ use egui_winit::winit::{
 };
 use event_loop::EventLoopEx;
 use gpu_context::GpuContext;
-use gpu_resources::texture::GpuWriteTexture2D;
+use gpu_resources::{parameters, texture::GpuWriteTexture2D};
 use render_pipeline::RenderPipeline;
 use state::StateParameters;
 use tracing::info;
@@ -79,16 +80,18 @@ fn benchmark_all() -> Result<()> {
     //
     //
     let parameters = StateParameters {
-        camera_position: Point3::new(0.5, 0.5, 0.5),
+        camera_position: Point3::new(0.5, 0.5, 3.5),
         density_trheshold: 0.15,
         use_cone_importance_check: false,
         use_importance_coloring: false,
         use_opacity: false,
         use_importance_rendering: false,
         use_gaussian_smoothing: false,
-        importance_check_ahead_steps: 20,
-        raymarching_step_size: 0.005,
+        importance_check_ahead_steps: 15,
+        raymarching_step_size: 0.020,
     };
+
+    let parameters = StateParameters::default();
 
     benchmark::<Simple>(parameters)?;
 

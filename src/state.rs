@@ -44,8 +44,8 @@ impl Default for StateParameters {
             use_importance_rendering: true,
             density_trheshold: 0.12,
             use_gaussian_smoothing: true,
-            importance_check_ahead_steps: 20,
-            raymarching_step_size: 0.005,
+            importance_check_ahead_steps: 15,
+            raymarching_step_size: 0.020,
         }
     }
 }

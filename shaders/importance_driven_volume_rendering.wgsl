@@ -240,7 +240,9 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         return;
     }
 
-    let step_size = parameters.raymarching_step_size;
+    let base_step_size = parameters.raymarching_step_size;
+    let min_step_size = base_step_size * 0.1; // Minimum step size when in dense regions
+    var current_step_size = base_step_size;
     var accumulated_color = vec3<f32>(0.0);
     var accumulated_alpha = 0.0;
 
@@ -257,8 +259,17 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
         let importance = textureSampleLevel(importances_texture, importances_sampler, current_pos, 0.0).r;
 
+         // Adapt step size based on density
+        if density >= parameters.density_threshold {
+            // When we hit something interesting, reduce step size
+            current_step_size = min_step_size;
+        } else {
+            // Gradually return to base step size when in empty space
+            current_step_size = min(base_step_size, current_step_size * 1.5);
+        }
+
         if density < parameters.density_threshold {
-            current_distance += step_size;
+            current_distance += current_step_size;
             continue;
         }
 
@@ -278,7 +289,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
                 }
 
                 if importance < 1.0 && has_important_object_ahead {
-                    current_distance += step_size;
+                    current_distance += current_step_size;
                 continue;
                 }
             }
@@ -300,7 +311,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         );
 
         if use_alpha {
-            let alpha = 1.0 - pow(1.0 - color_and_alpha.a, step_size * 100.0);
+            let alpha = 1.0 - pow(1.0 - color_and_alpha.a, current_step_size * 100.0);
             let opacity_contrib = (1.0 - accumulated_alpha) * alpha;
 
             accumulated_color += shaded_color * opacity_contrib;
@@ -311,7 +322,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
             break;
         }
 
-        current_distance += step_size;
+        current_distance += current_step_size;
     }
 
     textureStore(output_texture, vec2<u32>(global_id.x, global_id.y),
