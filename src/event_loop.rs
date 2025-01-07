@@ -2,6 +2,7 @@ use egui_winit::winit::{
     event::*,
     event_loop::{EventLoop, EventLoopWindowTarget},
     keyboard::{KeyCode, PhysicalKey},
+    platform::run_on_demand::EventLoopExtRunOnDemand,
 };
 use std::time::{Duration, Instant};
 use tracing::{debug, error, info, warn};
@@ -19,38 +20,46 @@ use crate::{
 };
 
 pub trait EventLoopEx {
-    type UserEvent: std::fmt::Debug;
+    type EventLoopUserMsg: std::fmt::Debug;
     fn run_volym(
-        self,
+        &mut self,
         settings: RunSettings,
         ctx: GpuContext,
         state: &mut State,
         render_pipeline: &RenderPipeline,
         demo: &impl ComputeDemo,
         egui: &mut GuiContext,
-        user_event_handler: impl FnMut(Self::UserEvent, &EventLoopWindowTarget<Self::UserEvent>),
+        user_event_handler: impl FnMut(
+            Self::EventLoopUserMsg,
+            &EventLoopWindowTarget<Self::EventLoopUserMsg>,
+        ),
         render_iput_texture: &GpuReadTexture2D,
-    ) -> Result<()>;
+    ) -> Result<(u32, Duration)>;
 }
 
 impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
-    type UserEvent = T;
+    type EventLoopUserMsg = T;
     #[tracing::instrument(skip_all)]
     fn run_volym(
-        self,
+        &mut self,
         settings: RunSettings,
         mut ctx: GpuContext,
         state: &mut State,
         render_pipeline: &RenderPipeline,
         demo: &impl ComputeDemo,
         egui: &mut GuiContext,
-        mut user_event_handler: impl FnMut(Self::UserEvent, &EventLoopWindowTarget<Self::UserEvent>),
+        mut user_event_handler: impl FnMut(
+            Self::EventLoopUserMsg,
+            &EventLoopWindowTarget<Self::EventLoopUserMsg>,
+        ),
         render_input_texture: &GpuReadTexture2D,
-    ) -> Result<()> {
-        let mut last_update = Instant::now();
-        let mut frame_count = 0;
+    ) -> Result<(u32, Duration)> {
+        let mut first_update = Instant::now();
+        let mut last_update = first_update;
+        let mut frame_count: u32 = 0;
+        let mut total_frames: u32 = 0;
 
-        self.run(move |event, control_flow| {
+        self.run_on_demand(move |event, control_flow| {
             debug!(target = "Render loop", "received event {:?}", event);
             match event {
                 Event::WindowEvent {
@@ -125,6 +134,7 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
                                 match render_result {
                                     Ok(_) => {
                                         frame_count += 1;
+                                        total_frames += 1;
                                         let now = Instant::now();
                                         if now.duration_since(last_update) >= Duration::from_secs(1)
                                         {
@@ -154,6 +164,6 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
             }
         })?;
 
-        Ok(())
+        return Ok((total_frames, Instant::now().duration_since(first_update)));
     }
 }

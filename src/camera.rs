@@ -36,7 +36,7 @@ impl Camera {
             zfar,
             horizontal_angle: 0.0,
             vertical_angle: 0.0,
-            distance: 2.0,
+            distance: 1.0,
             target,
             up,
             max_distance,

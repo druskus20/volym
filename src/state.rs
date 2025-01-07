@@ -25,7 +25,7 @@ pub struct State {
     pub raymarching_step_size: f32,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StateParameters {
     pub camera_position: Point3<f32>,
     pub density_trheshold: f32,
