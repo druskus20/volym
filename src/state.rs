@@ -1,6 +1,5 @@
-use crate::Result;
 use cgmath::Point3;
-use egui_wgpu::wgpu;
+use egui_wgpu::wgpu::{self, Buffer, BufferUsages, Texture};
 use egui_winit::winit::{
     event::{ElementState, KeyEvent, MouseButton, WindowEvent},
     keyboard::{KeyCode, PhysicalKey},
@@ -79,6 +78,7 @@ impl State {
     pub fn process_input(
         &mut self,
         ctx: &super::gpu_context::GpuContext,
+        texture_to_copy: &Texture,
         event: &WindowEvent,
     ) -> bool {
         let r = match event {
@@ -98,11 +98,14 @@ impl State {
                     .as_secs();
                 let screenshot_path = format!("screenshot_{}.png", now);
 
-                pollster::block_on(capture_screenshot(
+                pollster::block_on(save_screenshot(
                     &ctx.device,
                     &ctx.queue,
                     &output.texture,
+                    output.texture.size().width,
+                    output.texture.size().height,
                     &screenshot_path,
+                    texture_to_copy,
                 ));
 
                 info!("Screenshot saved to {}", screenshot_path);
@@ -154,95 +157,54 @@ impl State {
 
 use image::{ImageBuffer, Rgba};
 use wgpu::util::DeviceExt;
-async fn capture_screenshot(
+
+async fn save_screenshot(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
-    surface_texture: &wgpu::Texture,
+    texture: &wgpu::Texture,
+    width: u32,
+    height: u32,
     filename: &str,
-) -> Result<()> {
-    let format = surface_texture.format();
-    let size = surface_texture.size();
-    let width = size.width;
-    let height = size.height;
-
-    // Create an intermediate texture with COPY_SRC usage
-    let intermediate_texture = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("Screenshot Intermediate Texture"),
-        size: wgpu::Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-            | wgpu::TextureUsages::COPY_SRC
-            | wgpu::TextureUsages::COPY_DST,
-        view_formats: &[],
-    });
-
-    // Create buffer to receive the screenshot data
+    texture_to_copy: &Texture,
+) {
     let buffer_size = (width * height * 4) as wgpu::BufferAddress;
-    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+    let buffer_desc = wgpu::BufferDescriptor {
         label: Some("Screenshot Buffer"),
         size: buffer_size,
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
-    });
+    };
+    let buffer = device.create_buffer(&buffer_desc);
 
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("Screenshot Encoder"),
     });
 
-    // Copy from surface texture to intermediate texture
-    encoder.copy_texture_to_texture(
-        wgpu::ImageCopyTexture {
-            texture: surface_texture,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-        },
-        wgpu::ImageCopyTexture {
-            texture: &intermediate_texture,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-        },
-        wgpu::Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        },
-    );
+    let texture_copy_view = wgpu::ImageCopyTexture {
+        texture,
+        mip_level: 0,
+        origin: wgpu::Origin3d::ZERO,
+        aspect: wgpu::TextureAspect::All,
+    };
 
-    // Copy from intermediate texture to buffer
-    encoder.copy_texture_to_buffer(
-        wgpu::ImageCopyTexture {
-            texture: &intermediate_texture,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
+    let buffer_copy_view = wgpu::ImageCopyBuffer {
+        buffer: &buffer,
+        layout: wgpu::ImageDataLayout {
+            offset: 0,
+            bytes_per_row: Some(4 * width),
+            rows_per_image: Some(height),
         },
-        wgpu::ImageCopyBuffer {
-            buffer: &buffer,
-            layout: wgpu::ImageDataLayout {
-                offset: 0,
-                bytes_per_row: Some(4 * width),
-                rows_per_image: Some(height),
-            },
-        },
-        wgpu::Extent3d {
-            width,
-            height,
-            depth_or_array_layers: 1,
-        },
-    );
+    };
 
+    let extent = wgpu::Extent3d {
+        width,
+        height,
+        depth_or_array_layers: 1,
+    };
+
+    encoder.copy_texture_to_buffer(texture_copy_view, buffer_copy_view, extent);
     queue.submit(Some(encoder.finish()));
 
-    // Read the buffer
     let buffer_slice = buffer.slice(..);
     let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
     buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
@@ -255,5 +217,4 @@ async fn capture_screenshot(
     buffer.save(filename).unwrap();
 
     drop(data);
-    Ok(())
 }

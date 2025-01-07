@@ -191,6 +191,7 @@ fn run_with_event_loop<ComputeDemo: demos::ComputeDemo, UserEvent: std::fmt::Deb
         &compute_demo,
         &mut egui,
         user_event_handler,
+        &render_input_texture,
     )?;
 
     Ok(())

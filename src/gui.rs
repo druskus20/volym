@@ -10,6 +10,7 @@ use egui_winit::winit::window::Window;
 use egui_winit::State as EguiState;
 
 use crate::gpu_context::GpuContext;
+use crate::gpu_resources::texture::GpuReadTexture2D;
 use crate::state::State;
 
 pub struct GuiContext {

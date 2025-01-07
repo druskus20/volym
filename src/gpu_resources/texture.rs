@@ -5,8 +5,8 @@ use super::{BindGroupLayoutEntryUnbound, ToGpuResources};
 
 #[derive(Debug)]
 pub struct GpuWriteTexture2D {
-    texture_view: wgpu::TextureView,
-    texture: wgpu::Texture,
+    pub texture_view: wgpu::TextureView,
+    pub texture: wgpu::Texture,
 }
 
 impl GpuWriteTexture2D {
@@ -51,6 +51,7 @@ impl GpuWriteTexture2D {
             format: wgpu::TextureFormat::Rgba8Unorm,
             usage: wgpu::TextureUsages::STORAGE_BINDING
                 | wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_SRC
                 | wgpu::TextureUsages::RENDER_ATTACHMENT,
             view_formats: &[],
         });
@@ -68,7 +69,7 @@ impl ToGpuResources for GpuWriteTexture2D {
 pub struct GpuReadTexture2D {
     pub texture_view: wgpu::TextureView,
     pub sampler: wgpu::Sampler,
-    texture: wgpu::Texture,
+    pub texture: wgpu::Texture,
 }
 
 impl GpuReadTexture2D {
@@ -112,7 +113,8 @@ impl GpuReadTexture2D {
             format: wgpu::TextureFormat::Rgba8Unorm,
             usage: wgpu::TextureUsages::STORAGE_BINDING
                 | wgpu::TextureUsages::TEXTURE_BINDING
-                | wgpu::TextureUsages::RENDER_ATTACHMENT,
+                | wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::COPY_SRC,
             view_formats: &[],
         });
 

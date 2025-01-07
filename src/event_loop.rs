@@ -9,8 +9,13 @@ use tracing::{debug, error, info, warn};
 use egui_wgpu::{wgpu, ScreenDescriptor};
 
 use crate::{
-    demos::ComputeDemo, gpu_context::GpuContext, gui::GuiContext, render_pipeline::RenderPipeline,
-    state::State, Result, RunSettings,
+    demos::ComputeDemo,
+    gpu_context::GpuContext,
+    gpu_resources::texture::{GpuReadTexture2D, GpuWriteTexture2D},
+    gui::GuiContext,
+    render_pipeline::RenderPipeline,
+    state::State,
+    Result, RunSettings,
 };
 
 pub trait EventLoopEx {
@@ -24,6 +29,7 @@ pub trait EventLoopEx {
         demo: &impl ComputeDemo,
         egui: &mut GuiContext,
         user_event_handler: impl FnMut(Self::UserEvent, &EventLoopWindowTarget<Self::UserEvent>),
+        render_iput_texture: &GpuReadTexture2D,
     ) -> Result<()>;
 }
 
@@ -39,6 +45,7 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
         demo: &impl ComputeDemo,
         egui: &mut GuiContext,
         mut user_event_handler: impl FnMut(Self::UserEvent, &EventLoopWindowTarget<Self::UserEvent>),
+        render_input_texture: &GpuReadTexture2D,
     ) -> Result<()> {
         let mut last_update = Instant::now();
         let mut frame_count = 0;
@@ -54,7 +61,8 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
                     if is_egui_event {
                         return;
                     }
-                    let is_volym_event = state.process_input(&ctx, event);
+                    let is_volym_event =
+                        state.process_input(&ctx, &render_input_texture.texture, event);
                     if is_volym_event {
                         return;
                     }
