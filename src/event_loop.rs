@@ -54,7 +54,7 @@ impl<T: std::fmt::Debug> EventLoopEx for EventLoop<T> {
                     if is_egui_event {
                         return;
                     }
-                    let is_volym_event = state.process_input(event);
+                    let is_volym_event = state.process_input(&ctx, event);
                     if is_volym_event {
                         return;
                     }

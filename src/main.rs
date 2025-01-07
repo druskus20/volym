@@ -172,7 +172,7 @@ fn run_with_event_loop<ComputeDemo: demos::ComputeDemo, UserEvent: std::fmt::Deb
     let compute_output_texture = GpuWriteTexture2D::new(&ctx);
     let compute_demo = ComputeDemo::init(&ctx, &state, &compute_output_texture)?;
 
-    let render_input_texture = compute_output_texture.into_write_texture_2d(&ctx);
+    let render_input_texture = compute_output_texture.into_read_texture_2d(&ctx);
     let render_pipeline = RenderPipeline::init(&ctx, &render_input_texture)?;
 
     let mut egui = gui::GuiContext::new(

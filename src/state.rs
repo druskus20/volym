@@ -1,6 +1,11 @@
+use crate::Result;
 use cgmath::Point3;
-use egui_winit::winit::event::{ElementState, MouseButton, WindowEvent};
-use tracing::debug;
+use egui_wgpu::wgpu;
+use egui_winit::winit::{
+    event::{ElementState, KeyEvent, MouseButton, WindowEvent},
+    keyboard::{KeyCode, PhysicalKey},
+};
+use tracing::{debug, info};
 
 use crate::camera::{Camera, CameraController};
 
@@ -71,17 +76,38 @@ impl State {
         }
     }
 
-    pub fn process_input(&mut self, event: &WindowEvent) -> bool {
+    pub fn process_input(
+        &mut self,
+        ctx: &super::gpu_context::GpuContext,
+        event: &WindowEvent,
+    ) -> bool {
         let r = match event {
-            //WindowEvent::KeyboardInput {
-            //    event:
-            //        KeyEvent {
-            //            physical_key: PhysicalKey::Code(key),
-            //            state,
-            //            ..
-            //        },
-            //    ..
-            //} => self.camera_controller.process_keyboard(*key, *state),
+            WindowEvent::KeyboardInput {
+                event:
+                    KeyEvent {
+                        state: ElementState::Pressed,
+                        physical_key: PhysicalKey::Code(KeyCode::KeyP),
+                        ..
+                    },
+                ..
+            } => {
+                let output = ctx.surface.get_current_texture().unwrap();
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                let screenshot_path = format!("screenshot_{}.png", now);
+
+                pollster::block_on(capture_screenshot(
+                    &ctx.device,
+                    &ctx.queue,
+                    &output.texture,
+                    &screenshot_path,
+                ));
+
+                info!("Screenshot saved to {}", screenshot_path);
+                true
+            }
             WindowEvent::CursorMoved { position, .. } => {
                 if self.mouse_pressed {
                     let current_pos = (position.x, position.y);
@@ -124,4 +150,110 @@ impl State {
     pub fn update(&mut self) {
         self.camera_controller.update_camera(&mut self.camera);
     }
+}
+
+use image::{ImageBuffer, Rgba};
+use wgpu::util::DeviceExt;
+async fn capture_screenshot(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    surface_texture: &wgpu::Texture,
+    filename: &str,
+) -> Result<()> {
+    let format = surface_texture.format();
+    let size = surface_texture.size();
+    let width = size.width;
+    let height = size.height;
+
+    // Create an intermediate texture with COPY_SRC usage
+    let intermediate_texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("Screenshot Intermediate Texture"),
+        size: wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+            | wgpu::TextureUsages::COPY_SRC
+            | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+
+    // Create buffer to receive the screenshot data
+    let buffer_size = (width * height * 4) as wgpu::BufferAddress;
+    let buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("Screenshot Buffer"),
+        size: buffer_size,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("Screenshot Encoder"),
+    });
+
+    // Copy from surface texture to intermediate texture
+    encoder.copy_texture_to_texture(
+        wgpu::ImageCopyTexture {
+            texture: surface_texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::ImageCopyTexture {
+            texture: &intermediate_texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+    );
+
+    // Copy from intermediate texture to buffer
+    encoder.copy_texture_to_buffer(
+        wgpu::ImageCopyTexture {
+            texture: &intermediate_texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        wgpu::ImageCopyBuffer {
+            buffer: &buffer,
+            layout: wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
+            },
+        },
+        wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+    );
+
+    queue.submit(Some(encoder.finish()));
+
+    // Read the buffer
+    let buffer_slice = buffer.slice(..);
+    let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+    buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
+
+    device.poll(wgpu::Maintain::Wait);
+    receiver.receive().await.unwrap().unwrap();
+
+    let data = buffer_slice.get_mapped_range();
+    let buffer = ImageBuffer::<Rgba<u8>, _>::from_raw(width, height, data.to_vec()).unwrap();
+    buffer.save(filename).unwrap();
+
+    drop(data);
+    Ok(())
 }

@@ -25,7 +25,7 @@ impl GpuWriteTexture2D {
         Self::from_wgpu_texture(read_texture.texture)
     }
 
-    pub fn into_write_texture_2d(self, ctx: &GpuContext) -> GpuReadTexture2D {
+    pub fn into_read_texture_2d(self, ctx: &GpuContext) -> GpuReadTexture2D {
         GpuReadTexture2D::from_wgpu_texture(ctx, self.texture)
     }
 
