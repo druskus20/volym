@@ -126,122 +126,162 @@ impl GuiContext {
     }
 }
 
+use egui::{Color32, RichText, Ui, Vec2};
+
 fn show_ui(state: &mut State, ui: &mut egui::Ui) {
-    ui.heading("Camera Position");
-    let mut pos = [
-        state.camera.position.x,
-        state.camera.position.y,
-        state.camera.position.z,
-    ];
-    if ui
-        .add(egui::DragValue::new(&mut pos[0]).prefix("X: ").speed(0.1))
-        .changed()
-    {
-        state.camera.position.x = pos[0];
-    }
-    if ui
-        .add(egui::DragValue::new(&mut pos[1]).prefix("Y: ").speed(0.1))
-        .changed()
-    {
-        state.camera.position.y = pos[1];
-    }
-    if ui
-        .add(egui::DragValue::new(&mut pos[2]).prefix("Z: ").speed(0.1))
-        .changed()
-    {
-        state.camera.position.z = pos[2];
-    }
-    ui.add_space(10.0);
-    // Add copy button
-    if ui.button("📋 Copy Position").clicked() {
-        let position_text = format!(
-            "{:.3}, {:.3}, {:.3}",
-            state.camera.position.x, state.camera.position.y, state.camera.position.z
-        );
-        ui.output_mut(|o| o.copied_text = position_text);
-    }
+    ui.vertical(|ui| {
+        // Camera Controls Section
+        ui.add_space(4.0);
+        egui::CollapsingHeader::new(RichText::new("📷 Camera Controls").heading().size(18.0))
+            .default_open(true)
+            .show(ui, |ui| {
+                ui.add_space(8.0);
 
-    ui.add_space(10.0);
-    ui.checkbox(
-        &mut state.use_importance_coloring,
-        "Use Importance Coloring",
-    );
-    ui.add_space(10.0);
-    ui.checkbox(&mut state.use_opacity, "Use opacity");
-    ui.add_space(10.0);
-    ui.checkbox(
-        &mut state.use_importance_rendering,
-        "Use importance rendering",
-    );
-    ui.add_space(10.0);
-    ui.checkbox(
-        &mut state.use_cone_importance_check,
-        "Use cone importance check",
-    );
-    ui.add_space(10.0);
-    ui.checkbox(&mut state.use_gaussian_smoothing, "Use gaussian smoothing");
-    ui.add_space(10.0);
+                // Position controls in a grid
+                egui::Grid::new("camera_position_grid")
+                    .num_columns(2)
+                    .spacing([8.0, 4.0])
+                    .show(ui, |ui| {
+                        let mut pos = [
+                            state.camera.position.x,
+                            state.camera.position.y,
+                            state.camera.position.z,
+                        ];
 
-    ui.add_space(10.0);
-    ui.add(
-        egui::Slider::new(&mut state.importance_check_ahead_steps, 2..=25)
-            .text("Importance rendering look ahead steps"),
-    );
-    ui.add_space(10.0);
+                        for (i, (axis, val)) in
+                            ["X", "Y", "Z"].iter().zip(pos.iter_mut()).enumerate()
+                        {
+                            ui.label(RichText::new(*axis).strong());
+                            if ui
+                                .add(
+                                    egui::DragValue::new(val)
+                                        .speed(0.1)
+                                        .prefix(format!("{}: ", axis))
+                                        .clamp_range(-100.0..=100.0),
+                                )
+                                .changed()
+                            {
+                                state.camera.position[i] = *val;
+                            }
+                            ui.end_row();
+                        }
+                    });
 
-    ui.add_space(10.0);
-    ui.add(
-        egui::Slider::new(&mut state.raymarching_step_size, 0.001..=0.1)
-            .text("Raymarching step size"),
-    );
-    ui.add_space(10.0);
+                ui.add_space(4.0);
 
-    // slider for density threshold (min 0.005)
-    ui.add(egui::Slider::new(&mut state.density_threshold, 0.005..=1.0).text("Density Threshold"));
+                // Copy button with improved styling
+                if ui
+                    .add(
+                        egui::Button::new(
+                            RichText::new("📋 Copy Position").text_style(egui::TextStyle::Button),
+                        )
+                        .min_size(Vec2::new(120.0, 24.0)),
+                    )
+                    .clicked()
+                {
+                    let position_text = format!(
+                        "{:.3}, {:.3}, {:.3}",
+                        state.camera.position.x, state.camera.position.y, state.camera.position.z
+                    );
+                    ui.output_mut(|o| o.copied_text = position_text);
+                }
+            });
 
-    //ui.heading("Transfer Function");
-    //// Transfer function editor
-    //let transfer_response = ui.allocate_rect(
-    //    Rect::from_min_size(ui.cursor().min, Vec2::new(280.0, 100.0)),
-    //    egui::Sense::drag(),
-    //);
-    //if let Some(pointer_pos) = transfer_response.hover_pos() {
-    //    let normalized_x = (pointer_pos.x - transfer_response.rect.min.x)
-    //        / transfer_response.rect.width();
-    //    let normalized_y = 1.0
-    //        - (pointer_pos.y - transfer_response.rect.min.y)
-    //            / transfer_response.rect.height();
-    //    if transfer_response.dragged() {
-    //        state.transfer_points.push((
-    //            normalized_x.clamp(0.0, 1.0),
-    //            Color32::from_rgb(
-    //                (normalized_y * 255.0) as u8,
-    //                (normalized_y * 255.0) as u8,
-    //                (normalized_y * 255.0) as u8,
-    //            ),
-    //        ));
-    //    }
-    //}
-    //// Draw transfer function
-    //let painter = ui.painter();
-    //let rect = transfer_response.rect;
-    //// Background
-    //painter.rect_filled(rect, 0.0, Color32::from_gray(20));
-    //// Draw points and lines
-    //if state.transfer_points.len() >= 2 {
-    //    let mut points: Vec<Pos2> = state
-    //        .transfer_points
-    //        .iter()
-    //        .map(|(x, _)| Pos2::new(rect.min.x + x * rect.width(), rect.max.y))
-    //        .collect();
-    //    points.sort_by(|a, b| a.x.partial_cmp(&b.x).unwrap());
-    //    // Draw lines between points
-    //    for points in points.windows(2) {
-    //        painter.line_segment([points[0], points[1]], (1.0, Color32::WHITE));
-    //    }
-    //    // Draw points
-    //    for point in points {
-    //        painter.circle_filled(point, 3.0, Color32::WHITE);
-    //    }
-    //}
+        // Rendering Settings Section
+        ui.add_space(8.0);
+        egui::CollapsingHeader::new(RichText::new("🎨 Rendering Settings").heading().size(18.0))
+            .default_open(true)
+            .show(ui, |ui| {
+                ui.add_space(8.0);
+
+                add_setting_group(ui, "Primary Controls", |ui| {
+                    ui.checkbox(
+                        &mut state.use_importance_coloring,
+                        RichText::new("Importance Coloring").strong(),
+                    )
+                    .on_hover_text("Enable coloring based on importance values");
+
+                    let opacity_response = ui
+                        .add_enabled(
+                            !state.use_importance_rendering,
+                            egui::Checkbox::new(
+                                &mut state.use_opacity,
+                                RichText::new("Opacity").strong(),
+                            ),
+                        )
+                        .on_hover_text("Control opacity of rendered elements");
+
+                    if opacity_response.changed() && state.use_importance_rendering {
+                        state.use_opacity = true;
+                    }
+
+                    // Importance rendering with dependencies
+                    let imp_render_response = ui
+                        .checkbox(
+                            &mut state.use_importance_rendering,
+                            RichText::new("Importance Rendering").strong(),
+                        )
+                        .on_hover_text("Enable advanced importance-based rendering");
+
+                    if imp_render_response.changed() && state.use_importance_rendering {
+                        state.use_opacity = true;
+                    }
+                });
+
+                ui.add_space(8.0);
+
+                add_setting_group(ui, "Advanced Controls", |ui| {
+                    ui.add_enabled(
+                        state.use_importance_rendering,
+                        egui::Checkbox::new(
+                            &mut state.use_cone_importance_check,
+                            RichText::new("Cone Importance Check").strong(),
+                        ),
+                    )
+                    .on_hover_text(
+                        "Enable cone-based importance checking (requires Importance Rendering)",
+                    );
+
+                    ui.checkbox(
+                        &mut state.use_gaussian_smoothing,
+                        RichText::new("Gaussian Smoothing").strong(),
+                    )
+                    .on_hover_text("Apply Gaussian smoothing to the rendered output");
+                });
+
+                ui.add_space(8.0);
+
+                // Parameters section
+                add_setting_group(ui, "Parameters", |ui| {
+                    ui.add_enabled(
+                        state.use_importance_rendering,
+                        egui::Slider::new(&mut state.importance_check_ahead_steps, 2..=25)
+                            .text(RichText::new("Look Ahead Steps").strong())
+                            .clamp_to_range(true),
+                    )
+                    .on_hover_text("Number of steps to look ahead for importance rendering");
+
+                    ui.add(
+                        egui::Slider::new(&mut state.raymarching_step_size, 0.001..=0.1)
+                            .text(RichText::new("Raymarching Step Size").strong())
+                            .logarithmic(true),
+                    )
+                    .on_hover_text("Size of steps used in raymarching algorithm");
+
+                    ui.add(
+                        egui::Slider::new(&mut state.density_threshold, 0.005..=1.0)
+                            .text(RichText::new("Density Threshold").strong()),
+                    )
+                    .on_hover_text("Minimum density threshold for rendering");
+                });
+            });
+    });
+}
+
+fn add_setting_group(ui: &mut Ui, title: &str, add_contents: impl FnOnce(&mut Ui)) {
+    ui.group(|ui| {
+        ui.label(RichText::new(title).size(14.0).color(Color32::LIGHT_BLUE));
+        ui.add_space(4.0);
+        add_contents(ui);
+    });
 }

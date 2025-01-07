@@ -78,13 +78,14 @@ fn benchmark_all() -> Result<()> {
     // - gaussian smoothing
     // - check steps
     //
-    //
+    // opacity is needed for importance rendering
+    // importance rendering is neeed for importance_check_ahead_steps
     let parameters = StateParameters {
         camera_position: Point3::new(0.5, 0.5, 3.5),
+        use_opacity: false,
         density_trheshold: 0.15,
         use_cone_importance_check: false,
         use_importance_coloring: false,
-        use_opacity: false,
         use_importance_rendering: false,
         use_gaussian_smoothing: false,
         importance_check_ahead_steps: 15,
@@ -106,6 +107,7 @@ fn benchmark<ComputeDemo: demos::ComputeDemo>(parameters: StateParameters) -> Re
     let event_loop = EventLoopBuilder::<BenchmarkMsg>::with_user_event().build()?;
     let event_loop_proxy = event_loop.create_proxy();
     let window = WindowBuilder::new()
+        .with_inner_size(winit::dpi::PhysicalSize::new(1024, 768))
         .with_title("Volym")
         .build(&event_loop)?;
 
@@ -138,7 +140,7 @@ fn run<ComputeDemo: demos::ComputeDemo>() -> Result<()> {
     let event_loop = EventLoop::<()>::new()?;
     let window = WindowBuilder::new()
         .with_title("Volym")
-        .with_inner_size(winit::dpi::PhysicalSize::new(1024, 768))
+        .with_inner_size(winit::dpi::PhysicalSize::new(1400, 768))
         .build(&event_loop)?;
 
     run_with_event_loop::<ComputeDemo, ()>(
@@ -162,7 +164,7 @@ fn run_with_event_loop<ComputeDemo: demos::ComputeDemo, UserEvent: std::fmt::Deb
 
     // state needs to be mutable - thus separate from ctx
     let mut state = state::State::with_parameters(
-        (ctx.surface_config.width / ctx.surface_config.height) as f32,
+        ctx.surface_config.width as f32 / ctx.surface_config.height as f32,
         state_parameters,
     );
 

@@ -241,7 +241,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     }
 
     let base_step_size = parameters.raymarching_step_size;
-    let min_step_size = base_step_size * 0.1; // Minimum step size when in dense regions
+    let min_step_size = base_step_size * 0.25; // Minimum step size when in dense regions
     var current_step_size = base_step_size;
     var accumulated_color = vec3<f32>(0.0);
     var accumulated_alpha = 0.0;
