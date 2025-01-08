@@ -45,11 +45,11 @@ impl Default for StateParameters {
             use_cone_importance_check: false,
             use_importance_coloring: false,
             use_opacity: true,
-            use_importance_rendering: true,
+            use_importance_rendering: false,
             density_trheshold: 0.12,
             use_gaussian_smoothing: true,
-            importance_check_ahead_steps: 15,
-            raymarching_step_size: 0.020,
+            importance_check_ahead_steps: 12,
+            raymarching_step_size: 0.010,
         }
     }
 }

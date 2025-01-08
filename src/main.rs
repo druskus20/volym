@@ -62,7 +62,7 @@ struct RunSettings {
 impl Default for RunSettings {
     fn default() -> Self {
         Self {
-            refresh_rate_sync: true,
+            refresh_rate_sync: false,
             secs_per_benchmark: 2,
         }
     }
@@ -408,22 +408,24 @@ fn run_with_event_loop<ComputeDemo: demos::ComputeDemo>(
     event_loop: &mut EventLoop<EventLoopUserMsg>,
     user_event_handler: impl FnMut(EventLoopUserMsg, &EventLoopWindowTarget<EventLoopUserMsg>),
 ) -> Result<(u32, Duration)> {
-    // ctx needs to be independent to be moved into the event loop
+    // Initialize GPU resources
     let ctx = pollster::block_on(GpuContext::new(&window))?;
 
-    // state needs to be mutable - thus separate from ctx
+    // Initialize the state for the camera
     let mut state = state::State::with_parameters(
         ctx.surface_config.width as f32 / ctx.surface_config.height as f32,
         state_parameters,
     );
 
-    // Setup render pipeline and compute demo.
+    // Setup render pipeline
     let compute_output_texture = GpuWriteTexture2D::new(&ctx);
     let compute_demo = ComputeDemo::init(&ctx, &state, &compute_output_texture)?;
 
+    // Set up compute pipeline
     let render_input_texture = compute_output_texture.into_read_texture_2d(&ctx);
     let render_pipeline = RenderPipeline::init(&ctx, &render_input_texture)?;
 
+    // Initialize GUI
     let mut egui = gui::GuiContext::new(
         &ctx.device,               // wgpu Device
         ctx.surface_config.format, // TextureFormat
